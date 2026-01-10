@@ -27,22 +27,24 @@ async def async_setup_entry(
 
     # Vérification : Les paramètres existent-ils dans le mapping ?
     conf = WATER_HEATER_CONFIG
+    
+    # On vérifie si les slugs définis dans const.py existent dans le JSON de la chaudière
     if (conf["current"] in coordinator.device.params_map and 
         conf["target"] in coordinator.device.params_map):
         
-        # On vérifie si on reçoit des données
-        if conf["current"] in coordinator.data:
-            async_add_entities([PlumEcomaxWaterHeater(coordinator, conf)])
-        else:
-            _LOGGER.debug("Entité WaterHeater ignorée (pas de données).")
+        async_add_entities([PlumEcomaxWaterHeater(coordinator, conf)])
+    else:
+        _LOGGER.debug("Entité WaterHeater ignorée (paramètres manquants dans le JSON).")
 
 class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
     """Contrôle de l'Eau Chaude Sanitaire (ECS/CWU)."""
 
     _attr_has_entity_name = True
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    # On déclare qu'on ne supporte que la consigne de température pour l'instant
     _attr_supported_features = WaterHeaterEntityFeature.TARGET_TEMPERATURE
+    
+    # INDISPENSABLE : Lien vers la traduction dans fr.json -> entity -> water_heater -> eau_chaude_sanitaire
+    _attr_translation_key = "eau_chaude_sanitaire"
 
     def __init__(self, coordinator, config):
         super().__init__(coordinator)
@@ -57,9 +59,17 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
     def unique_id(self):
         return f"{DOMAIN}_{self._entry_id}_water_heater"
 
+    # SUPPRIMÉ : @property def name(self) 
+    # Home Assistant utilisera automatiquement la traduction "Eau Chaude Sanitaire"
+
     @property
-    def name(self):
-        return self._config["name"]
+    def device_info(self):
+        """Rattachement à l'appareil principal."""
+        return {
+            "identifiers": {(DOMAIN, self._entry_id)},
+            "name": "Plum EcoMAX",
+            "manufacturer": "Plum",
+        }
 
     @property
     def current_temperature(self):
@@ -73,24 +83,25 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
 
     @property
     def min_temp(self):
-        """Limite basse dynamique (lue depuis la chaudière)."""
+        """Limite basse dynamique."""
         val = self.coordinator.data.get(self._min_slug)
         return val if val is not None else 20.0
 
     @property
     def max_temp(self):
-        """Limite haute dynamique (lue depuis la chaudière)."""
+        """Limite haute dynamique."""
         val = self.coordinator.data.get(self._max_slug)
         return val if val is not None else 60.0
 
     @property
     def current_operation(self):
         """État de fonctionnement (Esthétique)."""
-        # On pourrait utiliser 'hdwstate' pour savoir si ça chauffe vraiment.
-        # Pour l'instant, si la cible est > 20°C, on considère que c'est actif.
         target = self.target_temperature
-        if target and target > 20:
-            return STATE_GAS # Affiche "Gaz" ou "Chauffe"
+        current = self.current_temperature
+        
+        # Logique simple : si la consigne est supérieure à l'actuelle + hystérésis, ça chauffe
+        if target and current and target > current:
+            return STATE_GAS 
         return STATE_OFF
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -101,11 +112,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
 
         _LOGGER.info(f"Changement consigne ECS -> {temp}")
         
-        # 1. Envoi sécurisé
-        success = await self.coordinator.device.set_value(self._target_slug, temp)
-
-        if success:
-            # 2. Mise à jour Optimiste (Reflet immédiat dans l'UI)
+        if await self.coordinator.device.set_value(self._target_slug, temp):
             self.coordinator.data[self._target_slug] = temp
             self.async_write_ha_state()
         else:

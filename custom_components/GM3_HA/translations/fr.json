@@ -1,0 +1,83 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configuration Plum EcoMAX",
+                "description": "Entrez les informations de connexion au module EcoNet.",
+                "data": {
+                    "ip_address": "Adresse IP",
+                    "port": "Port",
+                    "password": "Mot de passe",
+                    "active_circuits": "Circuits de chauffage actifs"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Connexion impossible",
+            "invalid_auth": "Authentification invalide"
+        },
+        "abort": {
+            "already_configured": "L'appareil est déjà configuré"
+        }
+    },
+    "selector": {
+        "circuits_selector": {
+            "options": {
+                "1": "Circuit 1",
+                "2": "Circuit 2",
+                "3": "Circuit 3",
+                "4": "Circuit 4",
+                "5": "Circuit 5",
+                "6": "Circuit 6",
+                "7": "Circuit 7"
+            }
+        }
+    },
+    "entity": {
+        "climate": {
+            "thermostat": { "name": "Thermostat" }
+        },
+        "water_heater": {
+            "eau_chaude_sanitaire": { "name": "Eau Chaude Sanitaire" }
+        },
+        "sensor": {
+            "tempwthr": { "name": "Température Extérieure" },
+            "boilerpower": { "name": "Puissance Chaudière" },
+            "worktime": { "name": "Temps de travail total" },
+            
+            "tempcwu": { "name": "Température ECS" },
+            
+            "tempbufordown": { "name": "Ballon Tampon (Bas)" },
+            "buforsetpoint": { "name": "Consigne Ballon Tampon" },
+
+            "tempcircuit1": { "name": "Température Départ" },
+            "tempcircuit2": { "name": "Température Départ" },
+            "tempcircuit3": { "name": "Température Départ" },
+            "tempcircuit4": { "name": "Température Départ" },
+            "tempcircuit5": { "name": "Température Départ" },
+            "tempcircuit6": { "name": "Température Départ" },
+            "tempcircuit7": { "name": "Température Départ" },
+            
+            "circuit1thermostattemp": { "name": "Température Ambiante" },
+            "circuit2thermostattemp": { "name": "Température Ambiante" },
+            "circuit3thermostattemp": { "name": "Température Ambiante" },
+            "circuit4thermostattemp": { "name": "Température Ambiante" },
+            "circuit5thermostattemp": { "name": "Température Ambiante" },
+            "circuit6thermostattemp": { "name": "Température Ambiante" },
+            "circuit7thermostattemp": { "name": "Température Ambiante" },
+
+            "mixer1valveposition": { "name": "Ouverture Vanne" },
+            "mixer2valveposition": { "name": "Ouverture Vanne" },
+            "mixer3valveposition": { "name": "Ouverture Vanne" },
+            "mixer4valveposition": { "name": "Ouverture Vanne" },
+            "mixer5valveposition": { "name": "Ouverture Vanne" },
+            "mixer6valveposition": { "name": "Ouverture Vanne" },
+            "mixer7valveposition": { "name": "Ouverture Vanne" }
+        },
+        "number": {
+            "hdwtsetpoint": { "name": "Consigne ECS" },
+            "hdwminsettemp": { "name": "ECS Min" },
+            "hdwmaxsettemp": { "name": "ECS Max" }
+        }
+    }
+}

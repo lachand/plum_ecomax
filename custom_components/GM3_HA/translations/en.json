@@ -1,0 +1,83 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Plum EcoMAX Configuration",
+                "description": "Enter the EcoNet connection details.",
+                "data": {
+                    "ip_address": "IP Address",
+                    "port": "Port",
+                    "password": "Password",
+                    "active_circuits": "Active Heating Circuits"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    },
+    "selector": {
+        "circuits_selector": {
+            "options": {
+                "1": "Circuit 1",
+                "2": "Circuit 2",
+                "3": "Circuit 3",
+                "4": "Circuit 4",
+                "5": "Circuit 5",
+                "6": "Circuit 6",
+                "7": "Circuit 7"
+            }
+        }
+    },
+    "entity": {
+        "climate": {
+            "thermostat": { "name": "Thermostat" }
+        },
+        "water_heater": {
+            "eau_chaude_sanitaire": { "name": "Domestic Hot Water" }
+        },
+        "sensor": {
+            "tempwthr": { "name": "Outside Temperature" },
+            "boilerpower": { "name": "Boiler Power" },
+            "worktime": { "name": "Total Work Time" },
+            
+            "tempcwu": { "name": "DHW Temperature" },
+            
+            "tempbufordown": { "name": "Buffer Tank (Bottom)" },
+            "buforsetpoint": { "name": "Buffer Tank Setpoint" },
+
+            "tempcircuit1": { "name": "Flow Temperature" },
+            "tempcircuit2": { "name": "Flow Temperature" },
+            "tempcircuit3": { "name": "Flow Temperature" },
+            "tempcircuit4": { "name": "Flow Temperature" },
+            "tempcircuit5": { "name": "Flow Temperature" },
+            "tempcircuit6": { "name": "Flow Temperature" },
+            "tempcircuit7": { "name": "Flow Temperature" },
+            
+            "circuit1thermostattemp": { "name": "Room Temperature" },
+            "circuit2thermostattemp": { "name": "Room Temperature" },
+            "circuit3thermostattemp": { "name": "Room Temperature" },
+            "circuit4thermostattemp": { "name": "Room Temperature" },
+            "circuit5thermostattemp": { "name": "Room Temperature" },
+            "circuit6thermostattemp": { "name": "Room Temperature" },
+            "circuit7thermostattemp": { "name": "Room Temperature" },
+
+            "mixer1valveposition": { "name": "Valve Opening" },
+            "mixer2valveposition": { "name": "Valve Opening" },
+            "mixer3valveposition": { "name": "Valve Opening" },
+            "mixer4valveposition": { "name": "Valve Opening" },
+            "mixer5valveposition": { "name": "Valve Opening" },
+            "mixer6valveposition": { "name": "Valve Opening" },
+            "mixer7valveposition": { "name": "Valve Opening" }
+        },
+        "number": {
+            "hdwtsetpoint": { "name": "DHW Setpoint" },
+            "hdwminsettemp": { "name": "DHW Min Temp" },
+            "hdwmaxsettemp": { "name": "DHW Max Temp" }
+        }
+    }
+}

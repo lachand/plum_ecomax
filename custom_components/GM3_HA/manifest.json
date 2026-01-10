@@ -2,10 +2,10 @@
   "domain": "plum_ecomax",
   "name": "Plum EcoMAX",
   "codeowners": ["@lachand"],
-  "config_flow": false,
-  "dependencies": [],
+  "config_flow": true,
   "documentation": "https://github.com/votre_repo",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/votre_repo/issues",
   "requirements": [],
-  "version": "0.0.1"
+  "version": "1.0.0"
 }

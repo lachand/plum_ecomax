@@ -1,52 +1,44 @@
 import logging
 import asyncio
+import os
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PLATFORMS
-from .const import DOMAIN, CONF_IP_ADDRESS
+from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT
+from .const import DOMAIN, DEFAULT_PORT
 from .coordinator import PlumDataUpdateCoordinator
 from .plum_device import PlumDevice
 
 _LOGGER = logging.getLogger(__name__)
-
-# On déclare les types d'entités qu'on va créer
-PLATFORMS = ["sensor", "climate", "number", "water_heater"]
+PLATFORMS = ["sensor", "climate", "number"]
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Configuration via YAML (obsolète mais supporté)."""
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Configuration via l'interface UI."""
-    ip = entry.data.get(CONF_IP_ADDRESS, "192.168.1.38") # Fallback IP
+    ip = entry.data.get(CONF_IP_ADDRESS)
+    port = entry.data.get(CONF_PORT, DEFAULT_PORT)
+    password = entry.data.get(CONF_PASSWORD, "0000")
     
-    _LOGGER.info(f"Initialisation Plum EcoMAX sur {ip}")
-
-    # 1. On initialise notre driver (votre fichier plum_device.py)
-    # Assurez-vous que device_map.json est bien copié dans le dossier du composant
-    device = PlumDevice(ip, map_file=hass.config.path("custom_components/plum_ecomax/device_map_ecomax360i.json"))
+    filename = "device_map_ecomax360i.json"
+    json_path = hass.config.path(f"custom_components/{DOMAIN}/{filename}")
     
-    # 2. On charge le mapping (IO bloquante -> dans un thread)
+    device = PlumDevice(ip, port=port, password=password, map_file=json_path)
+    
+    # Chargement du JSON dans un thread pour ne pas bloquer
     await asyncio.to_thread(device.load_map)
 
-    # 3. On crée le coordinateur qui va gérer les mises à jour
     coordinator = PlumDataUpdateCoordinator(hass, device)
     
-    # 4. Première mise à jour immédiate
+    # Premier rafraîchissement
     await coordinator.async_config_entry_first_refresh()
 
-    # 5. On stocke tout ça dans Home Assistant
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    # 6. On lance la création des entités (Sensors, Climates...)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Déchargement."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

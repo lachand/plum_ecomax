@@ -3,57 +3,81 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfPower,
     UnitOfTime,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    CONF_IP_ADDRESS,
+    CONF_PORT
 )
 
 DOMAIN = "plum_ecomax"
-CONF_IP_ADDRESS = "ip_address"
-CONF_UID = "uid"
+DEFAULT_PORT = 8899
 
-# Délai de rafraîchissement (30 secondes pour ne pas surcharger)
+CONF_ACTIVE_CIRCUITS = "active_circuits"
+
+# Mapping simplifié (Juste les clés)
+CIRCUIT_CHOICES = ["1", "2", "3", "4", "5", "6", "7"]
+
 UPDATE_INTERVAL = 30
 
-# --- CONFIGURATION DES CAPTEURS (Lecture Seule) ---
-# Format: "slug": ["Nom Affiché", Unité, Icone, DeviceClass]
+# --- CONFIGURATION DES CAPTEURS ---
+# Format: "slug": [Unité, Icone, DeviceClass] (3 éléments)
 SENSOR_TYPES = {
-    # GÉNÉRAL
-    "tempwthr": ["Température Extérieure", UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature"],
-    "boilerpower": ["Puissance Chaudière", UnitOfPower.KILO_WATT, "mdi:flash", "power"],
-    "worktime": ["Temps de travail total", UnitOfTime.SECONDS, "mdi:clock-outline", None],
-    
-    # EAU CHAUDE SANITAIRE (ECS / CWU)
-    "tempcwu": ["Température ECS", UnitOfTemperature.CELSIUS, "mdi:water-boiler", "temperature"],
-    
-    # BALLON TAMPON (BUFFER)
-    "tempbufordown": ["Ballon Tampon (Bas)", UnitOfTemperature.CELSIUS, "mdi:tank", "temperature"],
-    "buforsetpoint": ["Consigne Ballon Tampon", UnitOfTemperature.CELSIUS, "mdi:target", "temperature"],
+    "tempwthr": [UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature"],
+    "boilerpower": [UnitOfPower.KILO_WATT, "mdi:flash", "power"],
+    "worktime": [UnitOfTime.SECONDS, "mdi:clock-outline", None],
+    "tempcwu": [UnitOfTemperature.CELSIUS, "mdi:water-boiler", "temperature"],
+    "tempbufordown": [UnitOfTemperature.CELSIUS, "mdi:tank", "temperature"],
+    "buforsetpoint": [UnitOfTemperature.CELSIUS, "mdi:target", "temperature"],
 
-    # CIRCUITS MÉLANGEURS (TEMPÉRATURES)
-    "tempcircuit2": ["Température Circuit 2", UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit1": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit2": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit3": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit4": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit5": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit6": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "tempcircuit7": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    
+    "circuit1thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "circuit2thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "circuit3thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "circuit4thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "circuit5thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "circuit6thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
+    "circuit7thermostattemp" : [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
 
-    # VANNES MÉLANGEUSES (POSITION %)
-    "mixer2valveposition": ["Vanne 2 Ouverture", PERCENTAGE, "mdi:valve", None],
+    "mixer1valveposition": [PERCENTAGE, "mdi:valve", None],
+    "mixer2valveposition": [PERCENTAGE, "mdi:valve", None],
+    "mixer3valveposition": [PERCENTAGE, "mdi:valve", None],
+    "mixer4valveposition": [PERCENTAGE, "mdi:valve", None],
+    "mixer5valveposition": [PERCENTAGE, "mdi:valve", None],
+    "mixer6valveposition": [PERCENTAGE, "mdi:valve", None],
+    "mixer7valveposition": [PERCENTAGE, "mdi:valve", None],
 }
 
-# --- CONFIGURATION DES THERMOSTATS (Climate) ---
-# Format: "Nom": ["slug_temp_actuelle", "slug_consigne"]
+# --- THERMOSTATS ---
 CLIMATE_TYPES = {
-    "Circuit 2": ["tempcircuit2", "circuit2_romtempset"],
+    "1": ["tempcircuit1", "circuit2comforttemp"],
+    "2": ["tempcircuit2", "circuit2comforttemp"],
+    "3": ["tempcircuit3", "circuit2comforttemp"],
+    "4": ["tempcircuit4", "circuit2comforttemp"],
+    "5": ["tempcircuit5", "circuit2comforttemp"],
+    "6": ["tempcircuit6", "circuit2comforttemp"],
+    "7": ["tempcircuit7", "circuit2comforttemp"],
 }
 
-# Configuration ECS (Eau Chaude Sanitaire)
-# Format: [Slug_Actuelle, Slug_Consigne, Slug_Min, Slug_Max]
+# --- WATER HEATER ---
 WATER_HEATER_CONFIG = {
-    "name": "Eau Chaude Sanitaire",
+    # Nom supprimé ici, géré par clé de trad "eau_chaude_sanitaire"
     "current": "tempcwu",
     "target": "hdwtsetpoint",
     "min": "hdwminsettemp",
     "max": "hdwmaxsettemp",
 }
 
-# --- CONFIGURATION DES NOMBRES (Consignes simples) ---
-# Format: "slug": ["Nom", min, max, step, Icone]
+# --- NUMBER ---
+# Format: "slug": [min, max, step, Icone] (4 éléments)
 NUMBER_TYPES = {
-    "hdwtsetpoint": ["Consigne ECS", 20, 70, 1, "mdi:water-thermometer"],
-    "hdwminsettemp": ["ECS Min", 10, 50, 1, "mdi:thermometer-chevron-down"],
-    "hdwmaxsettemp": ["ECS Max", 50, 80, 1, "mdi:thermometer-chevron-up"],
+    "hdwtsetpoint": [20, 70, 1, "mdi:water-thermometer"],
+    "hdwminsettemp": [10, 50, 1, "mdi:thermometer-chevron-down"],
+    "hdwmaxsettemp": [50, 80, 1, "mdi:thermometer-chevron-up"],
 }

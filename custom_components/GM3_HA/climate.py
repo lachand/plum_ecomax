@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -11,111 +10,103 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CLIMATE_TYPES
+from .const import DOMAIN, CONF_ACTIVE_CIRCUITS
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Configuration des thermostats."""
+async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
+    selected_circuits = entry.data.get(CONF_ACTIVE_CIRCUITS, [])
     entities = []
 
-    for name, slugs in CLIMATE_TYPES.items():
-        current_temp_slug = slugs[0]
-        target_temp_slug = slugs[1]
+    for circuit_id in selected_circuits:
+        current_slug = f"circuit{circuit_id}thermostattemp"
+        target_slug = f"circuit{circuit_id}comforttemp"
+        active_slug = f"circuit{circuit_id}active"
+        
+        # Fallback sonde
+        if current_slug not in coordinator.device.params_map:
+             current_slug = f"tempcircuit{circuit_id}"
 
-        # On vérifie que les DEUX paramètres (Actuel et Consigne) existent dans le mapping
-        if (target_temp_slug in coordinator.device.params_map and 
-            current_temp_slug in coordinator.device.params_map):
-            
-            # On vérifie aussi qu'on reçoit bien des données (pour éviter les circuits fantômes)
-            # On est permissif : si au moins la consigne est lue, on affiche le thermostat
-            if target_temp_slug in coordinator.data:
-                entities.append(PlumEcomaxClimate(coordinator, name, current_temp_slug, target_temp_slug))
-            else:
-                _LOGGER.debug(f"Thermostat {name} ignoré (pas de données sur {target_temp_slug})")
+        if target_slug in coordinator.device.params_map:
+             entities.append(PlumEcomaxClimate(
+                 coordinator, entry, circuit_id, current_slug, target_slug, active_slug
+            ))
 
     if entities:
-        _LOGGER.info(f"Ajout de {len(entities)} thermostats Plum.")
         async_add_entities(entities)
 
-
 class PlumEcomaxClimate(CoordinatorEntity, ClimateEntity):
-    """Représentation d'un circuit de chauffage Plum."""
-
     _attr_has_entity_name = True
-    _attr_hvac_modes = [HVACMode.HEAT] # On simplifie : toujours en mode Chauffage
-    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
+    
+    # CLÉ DE TRADUCTION
+    _attr_translation_key = "thermostat"
 
-    def __init__(self, coordinator, name, current_slug, target_slug):
+    def __init__(self, coordinator, entry, circuit_id, current_slug, target_slug, active_slug):
         super().__init__(coordinator)
-        self._name_suffix = name
+        self._circuit_id = circuit_id
+        self._entry_id = entry.entry_id
         self._current_slug = current_slug
         self._target_slug = target_slug
-        self._entry_id = coordinator.config_entry.entry_id
-        
-        # Définition des bornes (Min/Max)
-        # Idéalement, on devrait lire "circuitXminsettemprad" dans le JSON
-        # Pour l'instant, on met des valeurs de sécurité standard
-        self._attr_min_temp = 10
-        self._attr_max_temp = 30
+        self._active_slug = active_slug
 
     @property
     def unique_id(self):
-        """ID unique stable."""
-        return f"{DOMAIN}_{self._entry_id}_climate_{self._target_slug}"
+        return f"{DOMAIN}_{self._entry_id}_circuit_{self._circuit_id}_climate"
 
     @property
-    def name(self):
-        """Nom de l'entité."""
-        return f"Thermostat {self._name_suffix}"
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, f"{self._entry_id}_circuit_{self._circuit_id}")},
+            "name": f"Circuit {self._circuit_id}",
+            "manufacturer": "Plum",
+            "model": "Module Chauffage",
+            "via_device": (DOMAIN, self._entry_id),
+        }
+
+    # IMPORTANT: On ne définit PAS def name(self) pour laisser HA gérer la trad "Circuit X Thermostat"
+
+    @property
+    def min_temp(self): return 10.0
+    @property
+    def max_temp(self): return 30.0
+    @property
+    def target_temperature_step(self): return 0.5
 
     @property
     def current_temperature(self):
-        """Température actuelle mesurée."""
-        return self.coordinator.data.get(self._current_slug)
+        val = self.coordinator.data.get(self._current_slug)
+        return float(val) if val is not None else None
 
     @property
     def target_temperature(self):
-        """Consigne actuelle."""
-        return self.coordinator.data.get(self._target_slug)
+        val = self.coordinator.data.get(self._target_slug)
+        if val is None: return 20.0 
+        return float(val)
 
     @property
     def hvac_mode(self):
-        """Mode actuel (Simulé à Heat pour l'instant)."""
+        is_active = self.coordinator.data.get(self._active_slug)
+        if is_active == 0: return HVACMode.OFF
         return HVACMode.HEAT
 
     async def async_set_hvac_mode(self, hvac_mode):
-        """Changement de mode (Non supporté réellement, on reste en Heat)."""
-        if hvac_mode != HVACMode.HEAT:
-            _LOGGER.warning("Seul le mode HEAT est supporté pour le moment.")
+        value = 1 if hvac_mode == HVACMode.HEAT else 0
+        if await self.coordinator.device.set_value(self._active_slug, value):
+            self.coordinator.data[self._active_slug] = value
+            self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs):
-        """Définir la nouvelle température de consigne."""
         temp = kwargs.get(ATTR_TEMPERATURE)
-        if temp is None:
-            return
-
-        _LOGGER.info(f"Demande de changement {self.name} -> {temp}")
-
-        # 1. Envoi de la commande à la chaudière
-        # On récupère le mot de passe depuis la config (si vous l'avez ajouté) ou par défaut
-        # Pour l'instant on utilise le défaut user/pass du driver
-        success = await self.coordinator.device.set_value(self._target_slug, temp)
-
-        if success:
-            # 2. Mise à jour Optimiste
-            # On force la valeur dans le cache local du coordinateur pour que l'UI se mette à jour
-            # instantanément, sans attendre le prochain cycle de lecture de 30s.
+        if temp is None: return
+        if self.hvac_mode == HVACMode.OFF:
+            await self.async_set_hvac_mode(HVACMode.HEAT)
+        
+        if await self.coordinator.device.set_value(self._target_slug, temp):
             self.coordinator.data[self._target_slug] = temp
-            self.async_write_ha_state() # Force le rafraîchissement de l'entité dans HA
-            _LOGGER.info(f"Consigne {self.name} mise à jour avec succès.")
+            self.async_write_ha_state()
         else:
-            _LOGGER.error(f"Échec de la modification de consigne pour {self.name}")
-            # En cas d'échec, on demande au coordinateur de relire les vraies valeurs
             await self.coordinator.async_request_refresh()
