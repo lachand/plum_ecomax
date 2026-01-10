@@ -40,6 +40,16 @@ CLIMATE_TYPES = {
     "Circuit 2": ["tempcircuit2", "circuit2_romtempset"],
 }
 
+# Configuration ECS (Eau Chaude Sanitaire)
+# Format: [Slug_Actuelle, Slug_Consigne, Slug_Min, Slug_Max]
+WATER_HEATER_CONFIG = {
+    "name": "Eau Chaude Sanitaire",
+    "current": "tempcwu",
+    "target": "hdwtsetpoint",
+    "min": "hdwminsettemp",
+    "max": "hdwmaxsettemp",
+}
+
 # --- CONFIGURATION DES NOMBRES (Consignes simples) ---
 # Format: "slug": ["Nom", min, max, step, Icone]
 NUMBER_TYPES = {
