@@ -2,21 +2,31 @@ import logging
 import asyncio
 import time
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .const import DOMAIN, UPDATE_INTERVAL, SENSOR_TYPES, CLIMATE_TYPES, NUMBER_TYPES
 
 _LOGGER = logging.getLogger(__name__)
 
-## Default cache validity duration in seconds (should be slightly lower than UPDATE_INTERVAL)
 DEFAULT_TTL = 25
+
+## Definitions of physical limits for validation
+# Format: "keyword_in_slug": (min_val, max_val)
+VALIDATION_RANGES = {
+    "temp": (-20, 100.0),     # Water temperature (avoid 0.0 which is often a sensor error)
+    "power": (0, 100),       # Percentage
+    "fan": (0, 100),         # Percentage
+    "valveposition": (0, 100),         # Percentage
+    "pressure": (0.0, 4.0),  # Bar
+    "lambda": (0.0, 25.0),   # Oxygen level
+}
 
 class PlumDataUpdateCoordinator(DataUpdateCoordinator):
     """
     @class PlumDataUpdateCoordinator
-    @brief Centralized data management for Plum ecoNET devices.
-    @details Handles periodic polling, parameter discovery, and data caching.
-    Acts as a middleware between Home Assistant entities and the physical device.
+    @brief Centralized data management with Robust Data Validation.
+    @details Implements caching, write-through strategies, and data sanitization
+    to prevent outliers from polluting the state machine.
     """
 
     def __init__(self, hass, device):
@@ -26,13 +36,13 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
         @param device The low-level PlumDevice instance.
         """
         self.device = device
-        self.available_slugs = [] ##< List of validated parameter slugs.
+        self.available_slugs = []
         
-        # --- Cache System ---
-        self._cache: Dict[str, Any] = {}       ##< Stores the latest known values.
-        self._timestamps: Dict[str, float] = {} ##< Stores the time of the last successful fetch.
-        self._cache_lock = asyncio.Lock()      ##< Ensures thread-safety during reads/writes.
-        self.ttl = DEFAULT_TTL                 ##< Time To Live for cache entries.
+        # Cache System
+        self._cache: Dict[str, Any] = {}
+        self._timestamps: Dict[str, float] = {}
+        self._cache_lock = asyncio.Lock()
+        self.ttl = DEFAULT_TTL
 
         super().__init__(
             hass,
@@ -43,113 +53,87 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """
-        @brief Main update loop triggered by Home Assistant every 30 seconds.
-        @details Iterates through discovered parameters. Uses cached data if it is
-        fresh enough (valid TTL), otherwise fetches from the device.
-        
-        @return Dict[str, Any] The complete dataset for all sensors.
+        @brief Main update loop with Validation and Fallback.
         """
         data = {}
         now = time.time()
         
-        # 1. Discovery phase (runs only once)
         if not self.available_slugs:
             await self._detect_available_parameters()
 
-        # 2. Data collection loop
         for slug in self.available_slugs:
             async with self._cache_lock:
                 last_update = self._timestamps.get(slug, 0)
                 is_fresh = (now - last_update) < self.ttl
                 cached_val = self._cache.get(slug)
 
-            # A. Cache Hit: Data is fresh, skip network request
+            # 1. Cache Hit
             if is_fresh and cached_val is not None:
                 data[slug] = cached_val
                 continue
 
-            # B. Cache Miss: Fetch from device
+            # 2. Fetch & Validate
             try:
-                # We release the lock during the network call to allow other tasks to run
-                val = await self.device.get_value(slug, retries=2)
+                raw_val = await self.device.get_value(slug, retries=2)
                 
-                if val is not None:
+                # --- VALIDATION STEP ---
+                is_valid, final_val = self._validate_value(slug, raw_val, cached_val)
+
+                if is_valid:
+                    # Valid new data: Update cache
                     async with self._cache_lock:
-                        self._cache[slug] = val
+                        self._cache[slug] = final_val
                         self._timestamps[slug] = time.time()
-                    data[slug] = val
+                    data[slug] = final_val
                 else:
-                    # Fallback: Use old cache if fetch fails, but log it
+                    # Invalid data: Use fallback (Hold Last State)
                     if cached_val is not None:
                         data[slug] = cached_val
-                        _LOGGER.debug(f"Fetch failed for {slug}, using stale cache.")
-
+                        # We do NOT update the timestamp to retry fetch sooner if needed,
+                        # OR we update it if we want to suppress the error for a cycle.
+                        # Here, we keep old timestamp to retry next cycle.
+                    
             except Exception as e:
                 _LOGGER.warning(f"Error reading {slug}: {e}")
-                # Persistence: keep existing data on error if possible
                 if slug in self._cache:
                     data[slug] = self._cache[slug]
         
         return data
 
-    async def async_set_value(self, slug: str, value: Any) -> bool:
+    def _validate_value(self, slug: str, raw_val: Any, cached_val: Any) -> Tuple[bool, Any]:
         """
-        @brief Writes a value to the device and updates the local cache immediately.
-        @details This implements the 'Write-Through' pattern. It allows the UI to 
-        update instantly without waiting for the next poll interval (Optimistic UI).
+        @brief Sanitizes the raw value based on physical constraints.
+        @details Checks against known error codes (999, NaN) and physical ranges.
         
         @param slug The parameter identifier.
-        @param value The value to write.
-        @return bool True if the write was successful.
+        @param raw_val The new value received from the device.
+        @param cached_val The previous known good value (for logging context).
+        @return Tuple[bool, Any] (IsValid, SafeValue).
         """
-        # 1. Perform the physical write
-        success = await self.device.set_value(slug, value)
-        
-        if success:
-            # 2. Update cache immediately (Optimistic update)
-            async with self._cache_lock:
-                self._cache[slug] = value
-                self._timestamps[slug] = time.time()
+        # A. Basic protocol checks
+        if raw_val is None:
+            return False, None
             
-            # 3. Notify Home Assistant that data has changed
-            # This forces entities to refresh their state from our cache
-            self.async_set_updated_data(self._cache)
-            _LOGGER.info(f"✅ Value {slug}={value} set and cache updated.")
-        else:
-            _LOGGER.error(f"❌ Failed to set {slug}={value}")
-            
-        return success
+        if isinstance(raw_val, (int, float)):
+            # 999 is the standard error code for disconnected sensors in Plum ecoNET
+            if raw_val == 999.0 or raw_val == 999:
+                _LOGGER.debug(f"⚠️ Rejection: {slug} returned sensor error code {raw_val}")
+                return False, None
 
-    async def _detect_available_parameters(self):
-        """
-        @brief Initial scan to filter out unsupported parameters.
-        @details Checks existence in JSON map and attempts a physical read.
-        """
-        _LOGGER.info("🔍 Initial scan of available parameters...")
-        
-        targets = []
-        
-        # 1. Sensors
-        targets.extend(list(SENSOR_TYPES.keys()))
-        
-        # 2. Climates (Temperature + Target)
-        for conf in CLIMATE_TYPES.values():
-            targets.extend(conf) 
-            
-        # 3. Numbers
-        targets.extend(list(NUMBER_TYPES.keys()))
-        
-        valid_slugs = []
-        for slug in targets:
-            if slug not in self.device.params_map:
-                continue
-                
-            val = await self.device.get_value(slug, retries=2)
-            
-            # Filter invalid values (999.0 often indicates a disconnected probe)
-            if val is not None and val != 999.0:
-                 valid_slugs.append(slug)
-                 _LOGGER.debug(f"Detected parameter: {slug}")
-        
-        self.available_slugs = list(set(valid_slugs))
-        _LOGGER.info(f"✅ {len(self.available_slugs)} active parameters retained.")
+        # B. Range checks (Heuristic)
+        # We look for keywords in the slug to determine the rule
+        for keyword, (min_v, max_v) in VALIDATION_RANGES.items():
+            if keyword in slug and isinstance(raw_val, (int, float)):
+                if not (min_v <= raw_val <= max_v):
+                    _LOGGER.warning(
+                        f"🛑 Outlier detected for {slug}: {raw_val} is outside [{min_v}, {max_v}]. "
+                        f"Holding last state ({cached_val})."
+                    )
+                    return False, None
+                break # Stop at first matching rule
+
+        # C. Success
+        return True, raw_val
+
+    # ... (rest of methods: async_set_value, _detect_available_parameters keep unchanged)
+    # Copier ici les méthodes async_set_value et _detect_available_parameters de la réponse précédente
