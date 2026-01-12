@@ -102,12 +102,12 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _validate_value(self, slug: str, raw_val: Any, cached_val: Any) -> Tuple[bool, Any]:
         """
-        @brief Sanitizes the raw value based on physical constraints.
-        @details Checks against known error codes (999, NaN) and physical ranges.
+        @brief Sanitizes the raw value based on JSON limits or Generic constraints.
+        @details
+        1. Checks for protocol errors (None, 999).
+        2. Checks specific limits defined in device_map.json (Priority).
+        3. Checks generic limits defined in VALIDATION_RANGES (Fallback).
         
-        @param slug The parameter identifier.
-        @param raw_val The new value received from the device.
-        @param cached_val The previous known good value (for logging context).
         @return Tuple[bool, Any] (IsValid, SafeValue).
         """
         # A. Basic protocol checks
@@ -115,24 +115,42 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
             return False, None
             
         if isinstance(raw_val, (int, float)):
-            # 999 is the standard error code for disconnected sensors in Plum ecoNET
             if raw_val == 999.0 or raw_val == 999:
                 _LOGGER.debug(f"⚠️ Rejection: {slug} returned sensor error code {raw_val}")
                 return False, None
+                
+        param_def = self.device.params_map.get(slug, {})
+        json_min = param_def.get("min")
+        json_max = param_def.get("max")
 
-        # B. Range checks (Heuristic)
-        # We look for keywords in the slug to determine the rule
-        for keyword, (min_v, max_v) in VALIDATION_RANGES.items():
-            if keyword in slug and isinstance(raw_val, (int, float)):
-                if not (min_v <= raw_val <= max_v):
-                    _LOGGER.warning(
-                        f"🛑 Outlier detected for {slug}: {raw_val} is outside [{min_v}, {max_v}]. "
-                        f"Holding last state ({cached_val})."
-                    )
-                    return False, None
-                break # Stop at first matching rule
+        if (json_min is not None or json_max is not None) and isinstance(raw_val, (int, float)):
+            is_valid = True
+            
+            if json_min is not None and raw_val < json_min:
+                is_valid = False
+            if json_max is not None and raw_val > json_max:
+                is_valid = False
+                
+            if not is_valid:
+                _LOGGER.warning(
+                    f"🛑 Specific Outlier detected for {slug}: {raw_val}. "
+                    f"JSON Limits [{json_min}, {json_max}]. Holding last state ({cached_val})."
+                )
+                return False, None
+        
+            return True, raw_val
 
-        # C. Success
+        if isinstance(raw_val, (int, float)):
+            for keyword, (min_v, max_v) in VALIDATION_RANGES.items():
+                if keyword in slug:
+                    if not (min_v <= raw_val <= max_v):
+                        _LOGGER.warning(
+                            f"🛑 Generic Outlier detected for {slug}: {raw_val}. "
+                            f"Global Limits [{min_v}, {max_v}]. Holding last state ({cached_val})."
+                        )
+                        return False, None
+                    break # Stop at first matching rule
+                    
         return True, raw_val
         
 
