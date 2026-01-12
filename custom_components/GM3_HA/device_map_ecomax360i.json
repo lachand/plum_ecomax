@@ -32,14 +32,18 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempCircuit2"
+        "name_orig": "TempCircuit2",
+        "min": 10,
+        "max": 100
     },
     "tempcircuit3": {
         "id": 67,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempCircuit3"
+        "name_orig": "TempCircuit3",
+        "min": 10,
+        "max": 100
     },
     "tempwthr": {
         "id": 68,
@@ -60,28 +64,36 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempCircuit4"
+        "name_orig": "TempCircuit4",
+        "min": 10,
+        "max": 100
     },
     "tempcircuit5": {
         "id": 71,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempCircuit5"
+        "name_orig": "TempCircuit5",
+        "min": 10,
+        "max": 100
     },
     "tempcircuit6": {
         "id": 72,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempCircuit6"
+        "name_orig": "TempCircuit6",
+        "min": 10,
+        "max": 100
     },
     "tempcircuit7": {
         "id": 73,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempCircuit7"
+        "name_orig": "TempCircuit7",
+        "min": 10,
+        "max": 100
     },
     "circuit1_romtempset": {
         "id": 91,
