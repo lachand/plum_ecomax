@@ -1,6 +1,8 @@
 """Unit tests for Climate entities."""
 import pytest
 from unittest.mock import MagicMock, AsyncMock
+
+# Assurez-vous que l'import correspond au nom de la classe dans votre fichier climate.py
 from custom_components.plum_ecomax.climate import PlumEcomaxClimate
 from custom_components.plum_ecomax.const import (
     PRESET_COMFORT, PRESET_ECO, PRESET_AWAY,
@@ -14,13 +16,18 @@ def climate_entity():
     coordinator.data = {}
     coordinator.async_set_value = AsyncMock(return_value=True)
     
-    # Slugs: Current, ComfortTarget, EcoTarget, Mode
     mock_entry = MagicMock()
     mock_entry.entry_id = "12345"
     
+    # --- CORRECTION ICI : Ajout de l'argument 'name' ("Test Climate") ---
     entity = PlumEcomaxClimate(
-        coordinator, mock_entry, 
-        "temp_curr", "target_comfort", "target_eco", "mode_slug"
+        coordinator, 
+        mock_entry,
+        "Test Climate",   # <--- Argument ajouté ici
+        "temp_curr",      # temp_slug
+        "target_comfort", # target_slug
+        "target_eco",     # eco_slug
+        "mode_slug"       # mode_slug
     )
     return entity
 
