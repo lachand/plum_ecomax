@@ -67,7 +67,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PlumEconetWaterHeater(CoordinatorEntity, WaterHeaterEntity):
+class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
     """
     @class PlumEconetWaterHeater
     @brief Représente le ballon d'Eau Chaude Sanitaire (ECS).
