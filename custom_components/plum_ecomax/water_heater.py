@@ -37,12 +37,9 @@ async def async_setup_entry(
 
     _LOGGER.info("🚀 Démarrage de la configuration Water Heater...")
 
-    for name, slugs in WATER_HEATER_TYPES.items():
-        # On déballe les slugs définis dans const.py
+    for key, slugs in WATER_HEATER_TYPES.items():
         current_temp, target_temp, min_temp, max_temp, mode_slug = slugs
         
-        # Vérification : Est-ce que les paramètres existent dans la définition de la chaudière (JSON) ?
-        # Note : On ne vérifie PAS si la valeur est None, juste si le paramètre est connu.
         has_current = current_temp in coordinator.device.params_map
         has_target = target_temp in coordinator.device.params_map
         
@@ -51,7 +48,7 @@ async def async_setup_entry(
             entities.append(
                 PlumEcomaxWaterHeater(
                     coordinator, 
-                    "Eau Chaude Sanitaire", 
+                    key, 
                     current_temp, target_temp, min_temp, max_temp, mode_slug
                 )
             )
@@ -85,9 +82,9 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
     # Liste des modes supportés (Off, Performance=Manuel, Eco=Auto)
     _attr_operation_list = [STATE_OFF, STATE_PERFORMANCE, STATE_ECO]
 
-    def __init__(self, coordinator, name, current_slug, target_slug, min_slug, max_slug, mode_slug):
+    def __init__(self, coordinator, translation_key, current_slug, target_slug, min_slug, max_slug, mode_slug):
         super().__init__(coordinator)
-        self._name = name
+        self._attr_translation_key = translation_key
         self._current_slug = current_slug
         self._target_slug = target_slug
         self._min_slug = min_slug
@@ -95,7 +92,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
         self._mode_slug = mode_slug
         
         self._attr_name = name
-        self._attr_unique_id = f"{DOMAIN}_water_heater"
+        self._attr_unique_id = f"{DOMAIN}_{translation_key}"
         self._attr_has_entity_name = True
 
     @property
