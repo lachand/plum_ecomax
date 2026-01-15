@@ -38,7 +38,7 @@
             "thermostat": { "name": "Thermostat" }
         },
         "water_heater": {
-            "eau_chaude_sanitaire": { "name": "Eau Chaude Sanitaire" }
+            "hdw": { "name": "Eau Chaude Sanitaire" }
         },
         "sensor": {
             "tempwthr": { "name": "Température Extérieure" },
