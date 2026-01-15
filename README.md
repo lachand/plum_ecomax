@@ -1,5 +1,5 @@
 # Plum ecoMAX for Home Assistant
-[![CI](https://github.com/lachand/plum_ecomax/actions/workflows/ci.yaml/badge.svg)](https://github.com/lachand/plum_ecomax/actions/workflows/ci.yaml)
+[![CI](https://github.com/lachand/plum_ecomax/actions/workflows/ci.yml/badge.svg)](https://github.com/lachand/plum_ecomax/actions/workflows/ci.yml)
 [![Documentation](https://github.com/lachand/plum_ecomax/actions/workflows/doc.yaml/badge.svg)](https://github.com/lachand/plum_ecomax/actions/workflows/doc.yaml)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
