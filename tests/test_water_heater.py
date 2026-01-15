@@ -1,7 +1,7 @@
 """Unit tests for Water Heater entity."""
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from custom_components.plum_ecomax.water_heater import PlumEconetWaterHeater
+from custom_components.plum_ecomax.water_heater import PlumEcomaxWaterHeater
 from homeassistant.components.water_heater import STATE_PERFORMANCE, STATE_ECO
 
 @pytest.fixture
@@ -10,7 +10,7 @@ def dhw_entity():
     coordinator.data = {}
     coordinator.async_set_value = AsyncMock(return_value=True)
     
-    entity = PlumEconetWaterHeater(
+    entity = PlumEcomaxWaterHeater(
         coordinator, "DHW", 
         "temp_curr", "temp_target", "temp_min", "temp_max", "mode_slug"
     )
