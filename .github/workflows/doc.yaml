@@ -1,0 +1,28 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'custom_components/**/*.py'
+      - 'Doxyfile'
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Doxygen
+        run: sudo apt-get install -y doxygen graphviz
+
+      - name: Generate Documentation
+        run: doxygen Doxyfile
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/html # Must match OUTPUT in Doxyfile
