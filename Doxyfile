@@ -1,0 +1,9 @@
+PROJECT_NAME           = "Plum EcoMAX"
+OUTPUT_DIRECTORY       = docs
+INPUT                  = custom_components/plum_ecomax
+RECURSIVE              = YES
+FILE_PATTERNS          = *.py
+OPTIMIZE_OUTPUT_JAVA   = YES
+EXTRACT_ALL            = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
