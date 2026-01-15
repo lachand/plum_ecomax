@@ -44,7 +44,7 @@ async def async_setup_entry(
         has_target = target_temp in coordinator.device.params_map
         
         if has_current and has_target:
-            _LOGGER.info(f"✅ Création du Water Heater '{name}' (Paramètres trouvés).")
+            _LOGGER.info(f"✅ Création du Water Heater '{key}' (Paramètres trouvés).")
             entities.append(
                 PlumEcomaxWaterHeater(
                     coordinator, 
@@ -55,7 +55,7 @@ async def async_setup_entry(
         else:
             # Log d'erreur explicite si l'entité n'est pas créée
             _LOGGER.error(
-                f"❌ Échec création Water Heater '{name}'. "
+                f"❌ Échec création Water Heater '{key}'. "
                 f"Paramètres manquants dans device_map.json : "
                 f"Temp='{current_temp}' (Présent={has_current}), "
                 f"Consigne='{target_temp}' (Présent={has_target})"
@@ -91,7 +91,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
         self._max_slug = max_slug
         self._mode_slug = mode_slug
         
-        self._attr_name = name
+        self._attr_name = translation_key
         self._attr_unique_id = f"{DOMAIN}_{translation_key}"
         self._attr_has_entity_name = True
 
@@ -102,7 +102,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
         """
         return DeviceInfo(
             identifiers={(DOMAIN, "plum_hdw")},
-            name="Eau Chaude Sanitaire",
+            name="HDW",
             manufacturer="Plum",
             model="Gestionnaire ECS",
         )
