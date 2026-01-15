@@ -151,7 +151,7 @@ WEEKDAY_TO_SLUGS = {
 # --- CONFIGURATION CHAUFFE-EAU (Water Heater) ---
 # Format: "Nom": (Temp_Actuelle, Consigne, Min, Max, Mode_Slug, Force_Slug)
 WATER_HEATER_TYPES = {
-    "default": (
+    "hdw": (
         "tempcwu",           # Température actuelle
         "hdwtsetpoint",        # Consigne
         "hdwminsettemp",     # Borne Min
