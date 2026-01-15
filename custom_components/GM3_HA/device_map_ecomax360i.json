@@ -11,21 +11,27 @@
         "type": "FLOAT",
         "unit": "C",
         "exponent": 0,
-        "name_orig": "TempCWU"
+        "name_orig": "TempCWU",
+        "min": 10,
+        "max": 80
     },
     "tempbuforup": {
         "id": 62,
         "type": "FLOAT",
         "unit": "C",
         "exponent": 0,
-        "name_orig": "TempBuforUp"
+        "name_orig": "TempBuforUp",
+        "min" : 10,
+        "max" : 100
     },
     "tempbufordown": {
         "id": 63,
         "type": "FLOAT",
         "unit": "C",
         "exponent": 0,
-        "name_orig": "TempBuforDown"
+        "name_orig": "TempBuforDown",
+        "min" : 10,
+        "max" : 100
     },
     "tempcircuit2": {
         "id": 66,
@@ -50,7 +56,10 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "TempWthr"
+        "name_orig": "TempWthr",
+        "min" : -20,
+        "max" : 50,
+        "max_delta": 0.5
     },
     "tempsettings": {
         "id": 69,
@@ -100,35 +109,45 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit1 romTempSet"
+        "name_orig": "Circuit1 romTempSet",
+        "min": 5,
+        "max": 30
     },
     "circuit2_romtempset": {
         "id": 92,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit2 romTempSet"
+        "name_orig": "Circuit2 romTempSet",
+        "min": 5,
+        "max": 30
     },
     "circuit3_romtempset": {
         "id": 93,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit3 romTempSet"
+        "name_orig": "Circuit3 romTempSet",
+        "min": 5,
+        "max": 30
     },
     "circuit4_romtempset": {
         "id": 94,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit4 romTempSet"
+        "name_orig": "Circuit4 romTempSet",
+        "min": 5,
+        "max": 30
     },
     "circuit5_romtempset": {
         "id": 95,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit5 romTempSet"
+        "name_orig": "Circuit5 romTempSet",
+        "min": 5,
+        "max": 30
     },
     "circuit6_romtempset": {
         "id": 96,
@@ -142,7 +161,9 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit7 romTempSet"
+        "name_orig": "Circuit7 romTempSet",
+        "min": 5,
+        "max": 30
     },
     "hdwsettings": {
         "id": 101,
@@ -163,7 +184,9 @@
         "type": "SHORT_INT",
         "unit": "C",
         "exponent": 0,
-        "name_orig": "HDWTSetPoint"
+        "name_orig": "HDWTSetPoint",
+        "min": 30,
+        "max": 70
     },
     "hdwtsetpointdownhist": {
         "id": 104,
@@ -184,14 +207,18 @@
         "type": "SHORT_INT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "HDWMinSetTemp"
+        "name_orig": "HDWMinSetTemp",
+        "min": 30,
+        "max": 70
     },
     "hdwmaxsettemp": {
         "id": 108,
         "type": "SHORT_INT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "HDWMaxSetTemp"
+        "name_orig": "HDWMaxSetTemp",
+        "min": 30,
+        "max": 70
     },
     "hdwtempkeepwarm": {
         "id": 109,
@@ -219,7 +246,8 @@
         "type": "SHORT_INT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "HDWStartOneLoading"
+        "name_orig": "HDWStartOneLoading",
+        "enum": [0,1]
     },
     "hdwdbstate": {
         "id": 116,
@@ -247,7 +275,8 @@
         "type": "SHORT_INT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "HDWusermode"
+        "name_orig": "HDWusermode",
+        "enum": [0,1,2]
     },
     "hdwsundayam": {
         "id": 120,
@@ -942,7 +971,7 @@
         "exponent": 0,
         "name_orig": "Circuit1longloading"
     },
-    "circuit1thermostat": {
+    "circuit1thermostattemp": {
         "id": 277,
         "type": "FLOAT",
         "unit": "",
@@ -1017,14 +1046,18 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit2ComfortTemp"
+        "name_orig": "Circuit2ComfortTemp",
+        "min": 5,
+        "max":30
     },
     "circuit2ecotemp": {
         "id": 289,
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit2EcoTemp"
+        "name_orig": "Circuit2EcoTemp",
+        "min": 5,
+        "max": 30
     },
     "circuit2downhist": {
         "id": 290,
@@ -1283,7 +1316,9 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit2thermostatTemp"
+        "name_orig": "Circuit2thermostatTemp",
+        "min": 5,
+        "max": 30
     },
     "circuit2name": {
         "id": 328,
@@ -2732,7 +2767,9 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit7thermostatTemp"
+        "name_orig": "Circuit7thermostatTemp",
+        "min": 5,
+        "max": 10
     },
     "circuit7name": {
         "id": 830,
@@ -3145,7 +3182,9 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit3thermostatTemp"
+        "name_orig": "Circuit3thermostatTemp",
+        "min": 5,
+        "max": 30
     },
     "circuit3name": {
         "id": 900,
@@ -3670,7 +3709,9 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit4thermostatTemp"
+        "name_orig": "Circuit4thermostatTemp",
+        "min": 5,
+        "max": 30
     },
     "circuit4name": {
         "id": 986,
@@ -4013,7 +4054,9 @@
         "type": "FLOAT",
         "unit": "",
         "exponent": 0,
-        "name_orig": "Circuit5thermostatTemp"
+        "name_orig": "Circuit5thermostatTemp",
+        "min": 5,
+        "max": 30
     },
     "circuit5name": {
         "id": 1037,

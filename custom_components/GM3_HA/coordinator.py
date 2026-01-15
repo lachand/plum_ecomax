@@ -4,7 +4,7 @@ import time
 from datetime import timedelta
 from typing import Any, Dict, Optional, Tuple
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from .const import DOMAIN, UPDATE_INTERVAL, SENSOR_TYPES, CLIMATE_TYPES, NUMBER_TYPES
+from .const import DOMAIN, UPDATE_INTERVAL, SENSOR_TYPES, CLIMATE_TYPES, NUMBER_TYPES, SCHEDULE_TYPES, WATER_HEATER_TYPES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,6 +122,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
         param_def = self.device.params_map.get(slug, {})
         json_min = param_def.get("min")
         json_max = param_def.get("max")
+        json_max_delta = param_def.get("max_delta")
 
         if (json_min is not None or json_max is not None) and isinstance(raw_val, (int, float)):
             is_valid = True
@@ -130,6 +131,8 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
                 is_valid = False
             if json_max is not None and raw_val > json_max:
                 is_valid = False
+            if json_max_delta is not None and cached_val is not None and abs(cached_val - raw_val) > json_max_delta :
+                is_valide = False
                 
             if not is_valid:
                 _LOGGER.warning(
@@ -200,13 +203,16 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
             
         # 3. Numbers
         targets.extend(list(NUMBER_TYPES.keys()))
+
+        for conf in WATER_HEATER_TYPES.values():
+            targets.extend(conf)
         
         valid_slugs = []
         for slug in targets:
             if slug not in self.device.params_map:
                 continue
                 
-            val = await self.device.get_value(slug, retries=2)
+            val = await self.device.get_value(slug, retries=5)
             
             # Filter invalid values (999.0 often indicates a disconnected probe)
             if val is not None and val != 999.0:

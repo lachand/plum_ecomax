@@ -90,7 +90,8 @@ SENSOR_TYPES = {
     "boilerpower": [UnitOfPower.KILO_WATT, "mdi:flash", "power"],
     "worktime": [UnitOfTime.SECONDS, "mdi:clock-outline", None],
     "tempcwu": [UnitOfTemperature.CELSIUS, "mdi:water-boiler", "temperature"],
-    "tempbufordown": [UnitOfTemperature.CELSIUS, "mdi:tank", "temperature"],
+    "tempbuforup": [UnitOfTemperature.CELSIUS, "mdi:water", "temperature"],
+    "tempbufordown": [UnitOfTemperature.CELSIUS, "mdi:water", "temperature"],
     "buforsetpoint": [UnitOfTemperature.CELSIUS, "mdi:target", "temperature"],
 
     "tempcircuit1": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
@@ -129,19 +130,48 @@ CLIMATE_TYPES = {
     "7": ["tempcircuit7", "circuit7comforttemp","circuit7ecotemp", "circuit7workstate"],
 }
 
-# --- WATER HEATER ---
-WATER_HEATER_CONFIG = {
-    # Nom supprimé ici, géré par clé de trad "eau_chaude_sanitaire"
-    "current": "tempcwu",
-    "target": "hdwtsetpoint",
-    "min": "hdwminsettemp",
-    "max": "hdwmaxsettemp",
+NUMBER_TYPES = {
+    
 }
 
-# --- NUMBER ---
-# Format: "slug": [min, max, step, Icone] (4 éléments)
-NUMBER_TYPES = {
-    "hdwtsetpoint": [20, 70, 1, "mdi:water-thermometer"],
-    "hdwminsettemp": [10, 50, 1, "mdi:thermometer-chevron-down"],
-    "hdwmaxsettemp": [50, 80, 1, "mdi:thermometer-chevron-up"],
+SCHEDULE_TYPES = {
+    
+}
+
+WEEKDAY_TO_SLUGS = {
+    0: ("mondayam", "mondaypm"),
+    1: ("tuesdayam", "tuesdaypm"),
+    2: ("wednesdayam", "wednesdaypm"),
+    3: ("thursdayam", "thursdaypm"),
+    4: ("fridayam", "fridaypm"),
+    5: ("saturdayam", "saturdaypm"),
+    6: ("sundayam", "sundaypm")
+}
+
+# --- CONFIGURATION CHAUFFE-EAU (Water Heater) ---
+# Format: "Nom": (Temp_Actuelle, Consigne, Min, Max, Mode_Slug, Force_Slug)
+WATER_HEATER_TYPES = {
+    "default": (
+        "tempcwu",           # Température actuelle
+        "hdwtsetpoint",        # Consigne
+        "hdwminsettemp",     # Borne Min
+        "hdwmaxsettemp",     # Borne Max
+        "hdwusermode",       # Mode (0=Off, 1=Manuel, 2=Auto)
+    )
+}
+
+# Mapping des modes Plum vers Home Assistant Water Heater
+# Off = Off
+# Manuel = Performance (ou Gas/Electric)
+# Auto = Eco
+PLUM_TO_HA_WATER_HEATER = {
+    0: "off",
+    1: "performance", # Considéré comme "Manuel / Confort permanent"
+    2: "eco"          # Considéré comme "Auto / Planning"
+}
+
+HA_TO_PLUM_WATER_HEATER = {
+    "off": 0,
+    "performance": 1,
+    "eco": 2
 }
