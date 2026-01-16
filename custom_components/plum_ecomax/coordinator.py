@@ -92,7 +92,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
 
             # 2. Fetch & Validate
             try:
-                raw_val = await self.device.get_value(slug, retries=2)
+                raw_val = await self.device.get_value(slug, retries=5)
                 
                 # --- VALIDATION STEP ---
                 is_valid, final_val = self._validate_value(slug, raw_val, cached_val)
@@ -182,35 +182,65 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
         
 
     async def async_set_value(self, slug: str, value: Any) -> bool:
-        """Writes a value to the device and updates the local cache immediately.
+        """Writes a value to the device and verifies it was correctly set.
 
-        This implements the 'Write-Through' pattern. It allows the UI to
-        update instantly without waiting for the next poll interval (Optimistic UI).
+        This implements a 'Write & Verify' pattern with retries. It attempts to write
+        the value, then reads it back to ensure the device accepted the change.
+        If the read value differs from the target, it retries up to 5 times.
 
         Args:
             slug: The parameter identifier.
             value: The value to write.
 
         Returns:
-            bool: True if the write was successful.
+            bool: True if the write was successful and verified.
         """
-        # 1. Perform the physical write
-        success = await self.device.set_value(slug, value)
+        max_retries = 5
         
-        if success:
-            # 2. Update cache immediately (Optimistic update)
-            async with self._cache_lock:
-                self._cache[slug] = value
-                self._timestamps[slug] = time.time()
+        for attempt in range(1, max_retries + 1):
+            # 1. Perform the physical write
+            write_success = await self.device.set_value(slug, value)
             
-            # 3. Notify Home Assistant that data has changed
-            # This forces entities to refresh their state from our cache
-            self.async_set_updated_data(self._cache)
-            _LOGGER.info(f"✅ Value {slug}={value} set and cache updated.")
-        else:
-            _LOGGER.error(f"❌ Failed to set {slug}={value}")
+            if write_success:
+                # 2. Verification step: Read back the value
+                # We wait a tiny bit to let the device process the write
+                await asyncio.sleep(0.5) 
+                
+                verified_value = await self.device.get_value(slug, retries=1)
+                
+                # Check if the read value matches our target
+                # We handle loose equality (e.g. 20.0 vs 20)
+                if verified_value is not None:
+                    # Conversion to float for robust comparison if numbers
+                    try:
+                        matches = float(verified_value) == float(value)
+                    except (ValueError, TypeError):
+                        matches = verified_value == value
+
+                    if matches:
+                        # 3. Success: Update cache (Optimistic update)
+                        async with self._cache_lock:
+                            self._cache[slug] = value
+                            self._timestamps[slug] = time.time()
+                        
+                        self.async_set_updated_data(self._cache)
+                        _LOGGER.info(f"✅ Value {slug}={value} set and verified (Attempt {attempt}).")
+                        return True
+                    else:
+                        _LOGGER.warning(
+                            f"⚠️ Write verification failed for {slug}. "
+                            f"Wrote: {value}, Read back: {verified_value}. Retrying ({attempt}/{max_retries})..."
+                        )
+                else:
+                    _LOGGER.warning(f"⚠️ Verification read failed for {slug}. Retrying ({attempt}/{max_retries})...")
+            else:
+                _LOGGER.error(f"❌ Physical write failed for {slug}. Retrying ({attempt}/{max_retries})...")
             
-        return success
+            # Exponential backoff before next retry (1s, 2s, 4s...)
+            await asyncio.sleep(1.0 * attempt)
+
+        _LOGGER.error(f"❌ Failed to set {slug}={value} after {max_retries} attempts.")
+        return False
 
     async def _detect_available_parameters(self):
         """Initial scan to filter out unsupported parameters.

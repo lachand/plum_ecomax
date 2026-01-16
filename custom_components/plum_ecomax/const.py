@@ -100,7 +100,7 @@ CONF_ACTIVE_CIRCUITS = "active_circuits"
 # Mapping simplifié (Juste les clés)
 CIRCUIT_CHOICES = ["1", "2", "3", "4", "5", "6", "7"]
 
-UPDATE_INTERVAL = 30
+UPDATE_INTERVAL = 60
 
 # --- CONFIGURATION DES CAPTEURS ---
 # Format: "slug": [Unité, Icone, DeviceClass] (3 éléments)
