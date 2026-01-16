@@ -175,3 +175,23 @@ HA_TO_PLUM_WATER_HEATER = {
     "performance": 1,
     "eco": 2
 }
+
+# Mapping for calendar
+WEEKDAY_TO_SLUGS = {
+    0: ("mondayam", "mondaypm"),
+    1: ("tuesdayam", "tuesdaypm"),
+    2: ("wednesdayam", "wednesdaypm"),
+    3: ("thursdayam", "thursdaypm"),
+    4: ("fridayam", "fridaypm"),
+    5: ("saturdayam", "saturdaypm"),
+    6: ("sundayam", "sundaypm"),
+}
+
+SCHEDULE_TYPES = {}
+for i in range(1, 8): # Circuits 1 à 7
+    for day_id, (suffix_am, suffix_pm) in WEEKDAY_TO_SLUGS.items():
+        slug_am = f"circuit{i}{suffix_am}"
+        slug_pm = f"circuit{i}{suffix_pm}"
+        # On ajoute au dictionnaire (la valeur est juste un label pour l'instant)
+        SCHEDULE_TYPES[slug_am] = f"Circuit {i} AM"
+        SCHEDULE_TYPES[slug_pm] = f"Circuit {i} PM"
