@@ -204,8 +204,12 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
         # 3. Numbers
         targets.extend(list(NUMBER_TYPES.keys()))
 
+        # 4. Water heater
         for conf in WATER_HEATER_TYPES.values():
             targets.extend(conf)
+
+        # 5. Schedules
+        targets.extend(list(SCHEDULE_TYPES.keys()))
         
         valid_slugs = []
         for slug in targets:

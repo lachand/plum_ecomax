@@ -188,10 +188,15 @@ WEEKDAY_TO_SLUGS = {
 }
 
 SCHEDULE_TYPES = {}
-for i in range(1, 8): # Circuits 1 à 7
+for i in range(1, 8): # Circuits 1 to 7
     for day_id, (suffix_am, suffix_pm) in WEEKDAY_TO_SLUGS.items():
         slug_am = f"circuit{i}{suffix_am}"
         slug_pm = f"circuit{i}{suffix_pm}"
-        # On ajoute au dictionnaire (la valeur est juste un label pour l'instant)
         SCHEDULE_TYPES[slug_am] = f"Circuit {i} AM"
         SCHEDULE_TYPES[slug_pm] = f"Circuit {i} PM"
+
+for day_id, (suffix_am, suffix_pm) in WEEKDAY_TO_SLUGS.items():
+    slug_am = f"hdw{suffix_am}"
+    slug_pm = f"hdw{suffix_pm}"
+    SCHEDULE_TYPES[slug_am] = "ECS AM"
+    SCHEDULE_TYPES[slug_pm] = "ECS PM"
