@@ -31,12 +31,12 @@ def mock_entry():
 
 def test_calendar_init_circuit(mock_coordinator, mock_entry):
     calendar = PlumEconetCalendar(mock_coordinator, mock_entry, "circuit", 1)
-    assert calendar.name == "Calendrier Circuit 1"
+    assert calendar.name == "Calendar Circuit 1"
     assert calendar.unique_id == f"{DOMAIN}_test_entry_id_calendar_circuit_1"
 
 def test_calendar_init_hdw(mock_coordinator, mock_entry):
     calendar = PlumEconetCalendar(mock_coordinator, mock_entry, "hdw", 0)
-    assert calendar.name == "Calendrier ECS"
+    assert calendar.name == "DHW Calendar"
     assert calendar.unique_id == f"{DOMAIN}_test_entry_id_calendar_hdw"
 
 @pytest.mark.asyncio
@@ -62,14 +62,14 @@ async def test_get_events_decoding_logic(mock_coordinator, mock_entry):
     
     # On vérifie les dates avec timezone UTC
     # Event 1: Eco 00:00 -> 06:00
-    assert events[0].summary == "Éco"
+    assert events[0].summary == "Eco"
     assert events[0].start == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
     assert events[0].end   == datetime(2024, 1, 1, 6, 0, tzinfo=timezone.utc)
     
     # Event 2: Confort 06:00 -> 08:00
     # NOTE: Vérifiez si votre code utilise "Confort" ou "Actif". 
     # J'utilise "Confort" ici comme dans votre dernière demande.
-    assert events[1].summary == "Actif" # ou "Confort" selon votre code calendar.py
+    assert events[1].summary == "Active" # ou "Confort" selon votre code calendar.py
     assert events[1].start == datetime(2024, 1, 1, 6, 0, tzinfo=timezone.utc)
     assert events[1].end   == datetime(2024, 1, 1, 8, 0, tzinfo=timezone.utc)
 
@@ -88,5 +88,5 @@ async def test_get_events_hdw_mapping(mock_coordinator, mock_entry):
         events = await calendar.async_get_events(hass, start_date, end_date)
         
     assert len(events) == 2
-    assert events[0].summary == "Actif"
+    assert events[0].summary == "Active"
     assert events[0].end == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)

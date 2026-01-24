@@ -154,9 +154,6 @@ NUMBER_TYPES = {
     
 }
 
-SCHEDULE_TYPES = {
-    
-}
 
 WEEKDAY_TO_SLUGS = {
     0: ("mondayam", "mondaypm"),
