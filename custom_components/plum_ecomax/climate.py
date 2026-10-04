@@ -7,6 +7,7 @@ automatic fallback for temperature sensors if the thermostat sensor is missing.
 
 import logging
 import math
+from typing import Any
 
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -14,9 +15,12 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import PlumConfigEntry
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
 from .coordinator import PlumDataUpdateCoordinator
 from .device import circuit_device_info
@@ -24,7 +28,9 @@ from .device import circuit_device_info
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: PlumConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Sets up Plum EcoMAX climate entities based on the config entry.
 
     This function dynamically creates climate entities for each active circuit
@@ -76,7 +82,15 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
 
     _attr_translation_key = "thermostat"
 
-    def __init__(self, coordinator, entry, circuit_id, current_slug, target_slug, active_slug):
+    def __init__(
+        self,
+        coordinator: PlumDataUpdateCoordinator,
+        entry: PlumConfigEntry,
+        circuit_id: str,
+        current_slug: str,
+        target_slug: str,
+        active_slug: str,
+    ) -> None:
         """Initializes the climate entity.
 
         Args:
@@ -113,22 +127,22 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
         return circuit_device_info(self._entry_id, self._circuit_id)
 
     @property
-    def min_temp(self):
+    def min_temp(self) -> float:
         """Returns the minimum target temperature."""
         return 10.0
 
     @property
-    def max_temp(self):
+    def max_temp(self) -> float:
         """Returns the maximum target temperature."""
         return 30.0
 
     @property
-    def target_temperature_step(self):
+    def target_temperature_step(self) -> float:
         """Returns the step size for target temperature."""
         return 0.5
 
     @property
-    def current_temperature(self):
+    def current_temperature(self) -> float | None:
         """Returns the current temperature.
 
         Returns:
@@ -137,7 +151,7 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
         return self._as_temp(self.coordinator.data.get(self._current_slug))
 
     @property
-    def target_temperature(self):
+    def target_temperature(self) -> float:
         """Returns the temperature we try to reach.
 
         Returns:
@@ -147,7 +161,7 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
         return val if val is not None else 20.0
 
     @staticmethod
-    def _as_temp(val):
+    def _as_temp(val: Any) -> float | None:
         """float(val) with None/NaN/non-numeric guarded (the coordinator
         validates most of this already, but climate reads slugs -- e.g. the
         tempcircuitN fallback -- that don't all go through range checks)."""
@@ -160,7 +174,7 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
         return None if math.isnan(f_val) or math.isinf(f_val) else f_val
 
     @property
-    def hvac_mode(self):
+    def hvac_mode(self) -> HVACMode:
         """Returns current operation mode (Heat or Off).
 
         Returns:
@@ -180,7 +194,7 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
         value = 1 if hvac_mode == HVACMode.HEAT else 0
         await self.coordinator.async_set_value(self._active_slug, value)
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Sets new target temperature.
 
         If the device is currently Off, it will be switched to Heat mode automatically.

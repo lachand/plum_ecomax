@@ -83,7 +83,7 @@ class PlumEconetSwitch(CoordinatorEntity[PlumDataUpdateCoordinator], SwitchEntit
 
     def __init__(
         self,
-        coordinator,
+        coordinator: PlumDataUpdateCoordinator,
         entry_id: str,
         slug: str,
         name: str,
@@ -151,7 +151,7 @@ class PlumSolarDumpAutoSwitch(
     _attr_translation_key = "solar_dump_auto"
     _attr_icon = "mdi:sun-clock"
 
-    def __init__(self, coordinator, entry_id: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator)
         self._entry_id = entry_id
         self._is_on = False

@@ -9,6 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from . import PlumConfigEntry
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN, WEEKDAY_TO_SLUGS
 from .coordinator import PlumDataUpdateCoordinator
 from .device import circuit_device_info, hdw_device_info
@@ -56,7 +57,13 @@ class PlumEconetCalendar(CoordinatorEntity[PlumDataUpdateCoordinator], CalendarE
     _attr_has_entity_name = True
     _attr_translation_key = "schedule"
 
-    def __init__(self, coordinator, entry, system_type: str, index: int):
+    def __init__(
+        self,
+        coordinator: PlumDataUpdateCoordinator,
+        entry: PlumConfigEntry,
+        system_type: str,
+        index: int,
+    ):
         """Initializes the calendar entity.
 
         Args:
@@ -138,7 +145,9 @@ class PlumEconetCalendar(CoordinatorEntity[PlumDataUpdateCoordinator], CalendarE
                 run_start = None
         return events
 
-    def _create_event(self, date_base, start_slot, end_slot) -> CalendarEvent:
+    def _create_event(
+        self, date_base: datetime.datetime, start_slot: int, end_slot: int
+    ) -> CalendarEvent:
         """A comfort CalendarEvent spanning [start_slot, end_slot) 30-min slots."""
         midnight = dt_util.as_local(date_base.replace(hour=0, minute=0, second=0, microsecond=0))
         dt_start = midnight + datetime.timedelta(minutes=30 * start_slot)

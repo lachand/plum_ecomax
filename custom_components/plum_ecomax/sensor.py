@@ -12,6 +12,7 @@ import contextlib
 import logging
 import math  # <--- CRITICAL: Import required for NaN checks
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -29,6 +30,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import PlumConfigEntry
 from .const import CONF_ACTIVE_CIRCUITS, DIAGNOSTIC_SENSOR_SLUGS, DOMAIN, SENSOR_TYPES
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, circuit_device_info
@@ -102,7 +104,14 @@ class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntit
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, slug, config, circuit_id=None):
+    def __init__(
+        self,
+        coordinator: PlumDataUpdateCoordinator,
+        entry: PlumConfigEntry,
+        slug: str,
+        config: Sequence[Any],
+        circuit_id: str | None = None,
+    ) -> None:
         """Initializes the sensor.
 
         Args:
@@ -117,9 +126,9 @@ class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntit
         self._attr_translation_key = slug
 
         # Unpack configuration from const.py
-        self._unit = config[0]
-        self._icon = config[1]
-        self._device_class = config[2]
+        self._unit: str | None = config[0]
+        self._icon: str | None = config[1]
+        self._device_class: str | None = config[2]
 
         self._entry_id = entry.entry_id
         self._circuit_id = circuit_id
@@ -160,7 +169,7 @@ class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntit
                 return None
 
         # For text sensors, return the value as is
-        return val
+        return cast(str | None, val)
 
     @property
     def available(self) -> bool:
@@ -233,7 +242,7 @@ class _PlumLinkHealthSensor(CoordinatorEntity[PlumDataUpdateCoordinator], Sensor
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry_id: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator)
         self._entry_id = entry_id
 
@@ -249,7 +258,7 @@ class PlumLastCommunicationSensor(_PlumLinkHealthSensor):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:lan-connect"
 
-    def __init__(self, coordinator, entry_id: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator, entry_id)
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_last_communication"
 
@@ -266,7 +275,7 @@ class PlumConsecutiveFailuresSensor(_PlumLinkHealthSensor):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:lan-disconnect"
 
-    def __init__(self, coordinator, entry_id: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator, entry_id)
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_consecutive_failures"
 
@@ -291,7 +300,7 @@ class PlumSolarDumpRuntimeSensor(
     _attr_state_class = SensorStateClass.TOTAL
     _attr_icon = "mdi:timer-play-outline"
 
-    def __init__(self, coordinator, entry_id: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator)
         self._entry_id = entry_id
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_solar_dump_runtime_today"

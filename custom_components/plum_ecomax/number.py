@@ -10,9 +10,12 @@ import re
 
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import PlumConfigEntry
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN, NUMBER_TYPES, SOLAR_DUMP_NUMBERS
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, circuit_device_info, hdw_device_info, mixers_device_info
@@ -66,7 +69,9 @@ def active_number_slugs(params_map: dict, selected_circuits: list) -> list:
     return slugs
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: PlumConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Sets up Plum EcoMAX number entities.
 
     Iterates through the `NUMBER_TYPES` configuration and creates an entity
@@ -102,7 +107,13 @@ class PlumEcomaxNumber(CoordinatorEntity[PlumDataUpdateCoordinator], NumberEntit
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, slug, config):
+    def __init__(
+        self,
+        coordinator: PlumDataUpdateCoordinator,
+        entry: PlumConfigEntry,
+        slug: str,
+        config: tuple[float, float, float, str],
+    ) -> None:
         """Initializes the number entity.
 
         Args:
@@ -154,7 +165,7 @@ class PlumEcomaxNumber(CoordinatorEntity[PlumDataUpdateCoordinator], NumberEntit
         return f"{DOMAIN}_{self._entry_id}_number_{self._slug}"
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | None:
         """Returns the current value of the number.
 
         Returns:
@@ -213,7 +224,7 @@ class PlumSolarDumpNumber(RestoreNumber):
     _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = NumberMode.BOX
 
-    def __init__(self, coordinator, entry, key: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry: PlumConfigEntry, key: str):
         default, minv, maxv, step, unit, icon, coord_attr = SOLAR_DUMP_NUMBERS[key]
         self._coordinator = coordinator
         self._entry_id = entry.entry_id

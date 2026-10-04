@@ -64,7 +64,7 @@ class PlumEconetSelect(CoordinatorEntity[PlumDataUpdateCoordinator], SelectEntit
 
     def __init__(
         self,
-        coordinator,
+        coordinator: PlumDataUpdateCoordinator,
         entry_id: str,
         slug: str,
         name: str,

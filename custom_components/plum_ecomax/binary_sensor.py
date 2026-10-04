@@ -77,7 +77,7 @@ class PlumManualModeBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], B
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry_id: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator)
         self._entry_id = entry_id
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_binary_sensor_manual_mode_active"
@@ -110,7 +110,7 @@ class PlumAlarmBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], Binary
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry_id: str, slug: str):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str, slug: str):
         super().__init__(coordinator)
         self._entry_id = entry_id
         self._slug = slug

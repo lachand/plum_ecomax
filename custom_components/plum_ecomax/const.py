@@ -18,6 +18,8 @@ Attributes:
     SENSOR_TYPES (dict): Definitions of available sensors [Unit, Icon, DeviceClass].
 """
 
+from typing import Any
+
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfPower,
@@ -255,7 +257,7 @@ ALARM_BITMASK_SLUGS = [
 
 # --- SENSOR CONFIGURATION ---
 # Format: "slug": [Unit, Icon, DeviceClass] (3 elements)
-SENSOR_TYPES = {
+SENSOR_TYPES: dict[str, list[Any]] = {
     "tempwthr": [UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature"],
     "boilerpower": [UnitOfPower.KILO_WATT, "mdi:flash", "power"],
     "tempcwu": [UnitOfTemperature.CELSIUS, "mdi:water-boiler", "temperature"],

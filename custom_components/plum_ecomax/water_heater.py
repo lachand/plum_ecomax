@@ -104,15 +104,15 @@ class PlumEcomaxWaterHeater(CoordinatorEntity[PlumDataUpdateCoordinator], WaterH
 
     def __init__(
         self,
-        coordinator,
-        entry_id,
-        translation_key,
-        current_slug,
-        target_slug,
-        min_slug,
-        max_slug,
-        mode_slug,
-    ):
+        coordinator: PlumDataUpdateCoordinator,
+        entry_id: str,
+        translation_key: str,
+        current_slug: str,
+        target_slug: str,
+        min_slug: str,
+        max_slug: str,
+        mode_slug: str,
+    ) -> None:
         """Initializes the water heater entity.
 
         Args:
@@ -238,7 +238,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity[PlumDataUpdateCoordinator], WaterH
 
         return PLUM_TO_HA_WATER_HEATER.get(raw_mode, STATE_OFF)
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Sets the water target temperature.
 
         Args:

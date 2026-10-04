@@ -11,9 +11,13 @@ import logging
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import EntityCategory
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import PlumConfigEntry
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info
@@ -24,14 +28,16 @@ _LOGGER = logging.getLogger(__name__)
 STORAGE_VERSION = 1
 
 
-def _snapshot_store(hass, entry_id: str) -> Store:
+def _snapshot_store(hass: HomeAssistant, entry_id: str) -> Store:
     """The on-disk store holding the saved reference values, one per
     config entry (so two boilers never share a snapshot).
     """
     return Store(hass, STORAGE_VERSION, f"{DOMAIN}_{entry_id}_number_defaults")
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: PlumConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Sets up the save/restore-defaults buttons."""
     coordinator = entry.runtime_data
     async_add_entities(
@@ -48,13 +54,13 @@ class _PlumDefaultsButtonBase(CoordinatorEntity[PlumDataUpdateCoordinator], Butt
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry: PlumConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
         self._entry_id = entry.entry_id
 
     @property
-    def device_info(self):
+    def device_info(self) -> DeviceInfo:
         return boiler_device_info(self._entry_id, self.coordinator.data.get("uid"))
 
     def _eligible_slugs(self) -> list:
@@ -77,7 +83,7 @@ class PlumSaveDefaultsButton(_PlumDefaultsButtonBase):
 
     _attr_translation_key = "save_number_defaults"
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry: PlumConfigEntry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_{self._entry_id}_save_number_defaults"
 
@@ -100,7 +106,7 @@ class PlumRestoreDefaultsButton(_PlumDefaultsButtonBase):
 
     _attr_translation_key = "restore_number_defaults"
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry: PlumConfigEntry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_{self._entry_id}_restore_number_defaults"
 
