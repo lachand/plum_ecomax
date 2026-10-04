@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from .plum_device import PlumDevice
@@ -90,6 +90,10 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
     Implements caching, write-through strategies, and data sanitization
     to prevent outliers from polluting the state machine.
     """
+
+    # True while the boiler is unreachable -- lets the outage be logged once
+    # on the way down and once on recovery instead of every cycle.
+    _link_down: bool = False
 
     def __init__(
         self,
@@ -181,11 +185,30 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
         # (spec 1.5.3.12 allows several parameter blocks per request), instead
         # of one TCP connection per parameter.
         raw_values: dict[str, Any] = {}
+        read_error: Exception | None = None
         if to_fetch:
             try:
                 raw_values = await self.device.get_values(to_fetch, retries=2)
             except Exception as e:
-                _LOGGER.warning("Error during batched read of %d parameters: %s", len(to_fetch), e)
+                read_error = e
+
+            # Nothing usable came back at all: the link is down, not just a
+            # few implausible readings. Surface it so entities go
+            # unavailable (and first refresh raises ConfigEntryNotReady)
+            # rather than serving stale cache indefinitely.
+            if read_error is not None or not any(v is not None for v in raw_values.values()):
+                self._update_connection_issue()
+                if not self._link_down:
+                    _LOGGER.warning(
+                        "Lost communication with the boiler (%d parameters unread): %s",
+                        len(to_fetch),
+                        read_error or "no valid response",
+                    )
+                self._link_down = True
+                raise UpdateFailed("Boiler unreachable") from read_error
+        if self._link_down:
+            _LOGGER.info("Communication with the boiler restored")
+            self._link_down = False
 
         # 3. Validate & fall back per-slug
         for slug in to_fetch:
@@ -444,7 +467,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
         values = dict(await self.device.get_values(candidates, retries=5))
 
         # This boiler is known to fail an entire batch when it contains one
-        # PID it doesn't recognise (IMPROVEMENT_PLAN.md section F,
+        # PID it doesn't recognise (IMPROVEMENT_PLAN_ARCHIVE.md section F,
         # tools/scan_device_map.py) -- and the detection candidate list is
         # exactly where unrecognised-but-catalogued PIDs turn up (all 7
         # circuits' curves, every mixer, ...). A poisoned batch would drop

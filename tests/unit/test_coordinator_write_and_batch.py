@@ -6,7 +6,7 @@ its real `__init__`: `DataUpdateCoordinator.__init__` on the `homeassistant`
 version this suite currently resolves calls `frame.report_usage`, which
 raises `RuntimeError: Frame helper not set up` against this project's
 lightweight `hass=MagicMock()` fixture (pre-existing gap, unrelated to
-this diff -- see IMPROVEMENT_PLAN.md). Only the attributes
+this diff -- see IMPROVEMENT_PLAN_ARCHIVE.md). Only the attributes
 `_async_update_data`/`async_set_value`/`_perform_repeated_write` actually
 touch are seeded: `device`, `hass`, `entry_id`, `available_slugs`,
 `_cache`, `_timestamps`, `_cache_lock`, `ttl`. `async_set_updated_data` is
@@ -21,10 +21,12 @@ assert on them.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.plum_ecomax.coordinator import PlumDataUpdateCoordinator
 
@@ -196,10 +198,11 @@ class TestBatchedPolling:
     @pytest.mark.asyncio
     async def test_slug_missing_from_batch_result_falls_back_to_cache(self):
         device = MagicMock()
-        device.get_values = AsyncMock(return_value={})  # didn't answer this round
+        # tempco answered, tempcwu didn't this round (partial batch)
+        device.get_values = AsyncMock(return_value={"tempco": 55})
         coordinator = _make_coordinator(
             device=device,
-            available_slugs=["tempcwu"],
+            available_slugs=["tempcwu", "tempco"],
             cache={"tempcwu": 42},
             timestamps={"tempcwu": 0},
         )
@@ -317,7 +320,8 @@ class TestConnectionLostIssue:
         device.get_values = AsyncMock(return_value={})
         coordinator = _make_coordinator(device=device, available_slugs=["dummy"], entry_id="entryA")
 
-        await coordinator._async_update_data()
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
 
         mock_clear.assert_called_once_with(coordinator.hass, "connection_lost_entryA")
         mock_raise.assert_not_called()
@@ -330,7 +334,8 @@ class TestConnectionLostIssue:
         device.get_values = AsyncMock(return_value={})
         coordinator = _make_coordinator(device=device, available_slugs=["dummy"], entry_id="entryA")
 
-        await coordinator._async_update_data()
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
 
         mock_raise.assert_called_once()
         args, kwargs = mock_raise.call_args
@@ -348,7 +353,8 @@ class TestConnectionLostIssue:
         device.get_values = AsyncMock(return_value={})
         coordinator = _make_coordinator(device=device, available_slugs=["dummy"], entry_id="entryB")
 
-        await coordinator._async_update_data()
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
 
         assert mock_raise.call_args.args[1] == "connection_lost_entryB"
 
@@ -360,7 +366,7 @@ class TestDetectAvailableParametersIncludesSwitchesAndSelects:
     DataUpdateCoordinator.data is fully replaced (not merged) on every
     refresh, that meant a switch's optimistic "on" state reverted to
     unknown at the very next poll cycle regardless of the real hardware
-    state -- confirmed against real hardware (IMPROVEMENT_PLAN.md).
+    state -- confirmed against real hardware (IMPROVEMENT_PLAN_ARCHIVE.md).
     """
 
     @pytest.mark.asyncio
@@ -426,3 +432,43 @@ class TestDetectionRobustness:
         device.get_values.assert_awaited_once_with(["tempcwu"], retries=2)
         assert data["circuit2basetemp"] == 40
         assert data["tempcwu"] == 56.0
+
+
+class TestLinkDown:
+    """coordinator.py: a cycle that reads nothing at all raises UpdateFailed
+    (entities go unavailable, first refresh -> ConfigEntryNotReady), logged
+    once per outage and once on recovery.
+    """
+
+    @pytest.mark.asyncio
+    async def test_read_exception_raises_update_failed(self):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(side_effect=OSError("down"))
+        coordinator = _make_coordinator(
+            device=device, available_slugs=["tempcwu"], cache={"tempcwu": 42}
+        )
+
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+
+    @pytest.mark.asyncio
+    async def test_outage_logged_once_then_recovery_logged(self, caplog):
+        caplog.set_level(logging.INFO)
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(return_value={})
+        coordinator = _make_coordinator(
+            device=device, available_slugs=["tempcwu"], cache={"tempcwu": 42}
+        )
+
+        for _ in range(3):
+            with pytest.raises(UpdateFailed):
+                await coordinator._async_update_data()
+        assert sum("Lost communication" in r.message for r in caplog.records) == 1
+
+        device.get_values = AsyncMock(return_value={"tempcwu": 43})
+        data = await coordinator._async_update_data()
+
+        assert data["tempcwu"] == 43
+        assert any("restored" in r.message for r in caplog.records)
