@@ -28,7 +28,7 @@ from homeassistant.const import (
 # The ecoSTER "manual control" service screen writes pid 161 = 2 to put the
 # controller in manual mode and = 1 to return to automatic. Confirmed by
 # passive RS-485 bus capture over several clean enter/exit cycles
-# (IMPROVEMENT_PLAN.md section N): MANUAL_MODE_SLUG bit 64 follows it exactly,
+# (IMPROVEMENT_PLAN_ARCHIVE.md section N): MANUAL_MODE_SLUG bit 64 follows it exactly,
 # and a write of pid 161 = 2 from this integration was validated live to
 # raise that bit and be cleanly reversible. Manual mode is the ONLY state in
 # which hdwpumpforce (and the other force overrides) physically take effect.
@@ -220,7 +220,7 @@ DEVICE_INFO_PARAMS = ["uid"]
 # --- BINARY SENSOR CONFIGURATION ---
 # "Manual mode active": heatsourcemainpumpstate bit 6 (value 64). Empirically
 # confirmed reliable across 3 independent physical panel tests
-# (IMPROVEMENT_PLAN.md section H) -- the only state in which manual
+# (IMPROVEMENT_PLAN_ARCHIVE.md section H) -- the only state in which manual
 # overrides like the hdwpumpforce switch actually have a physical effect;
 # writing them while the panel isn't in manual mode is accepted and held by
 # the boiler but does nothing.
@@ -265,7 +265,7 @@ SENSOR_TYPES = {
     # the device map (id sequence 61,62,63,64,65,[gap],66=tempcircuit2,67=
     # tempcircuit3,...) -- circuit 1's room temperature is already covered
     # via circuit1thermostattemp, and climate.py's own fallback chain
-    # doesn't need this slug either. See IMPROVEMENT_PLAN.md.
+    # doesn't need this slug either. See IMPROVEMENT_PLAN_ARCHIVE.md.
     "tempcircuit2": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
     "tempcircuit3": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
     "tempcircuit4": [UnitOfTemperature.CELSIUS, "mdi:radiator", "temperature"],
