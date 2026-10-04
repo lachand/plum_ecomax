@@ -148,8 +148,13 @@ async def test_ui_delete_is_allowed_only_for_stale_devices(hass):
         identifiers={(DOMAIN, f"{entry.entry_id}_circuit_6")},
         name="Circuit 6",
     )
-    main = registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    live = registry.async_get_device(identifiers={(DOMAIN, f"{entry.entry_id}_circuit_2")})
+    devices = {
+        ident: device
+        for device in dr.async_entries_for_config_entry(registry, entry.entry_id)
+        for _, ident in device.identifiers
+    }
+    main = devices[entry.entry_id]
+    live = devices[f"{entry.entry_id}_circuit_2"]
 
     assert await async_remove_config_entry_device(hass, entry, stale)
     assert not await async_remove_config_entry_device(hass, entry, main)
