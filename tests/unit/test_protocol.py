@@ -13,7 +13,10 @@ import pytest
 from custom_components.plum_ecomax.protocol import (
     CMD_READ_RESP,
     CMD_WRITE_RESP,
+    DEST_ID,
+    SOURCE_ID,
     Frame,
+    build_frame,
     crc16,
     decode_value,
     encode_value,
