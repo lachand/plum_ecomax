@@ -104,6 +104,10 @@ Any of these can be changed later via **Reconfigure** on the integration card, w
 
 Unit and regression tests live in `tests/` (`pytest tests/`). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 0.8.0
+
+Internal cleanup and resilience release, no new entities. **Behaviour change during an outage:** when the boiler is unreachable, a read cycle now gives up after a few failed attempts instead of paying a timeout per batch, and the polling interval is doubled (up to 5 minutes) until the boiler answers again, then restored to the configured value — so sensors refresh less often while it is down, and the next attempt after it comes back can take up to the stretched interval. Under the hood: the wire codec moved to its own module (`protocol.py`), the serial-number helpers moved out of the config flow, and `mypy` now runs with `disallow_untyped_defs` and related checks in CI. Restart Home Assistant after updating.
+
 ### Upgrading to 0.7.0
 
 Cleanup release, no new entities. **Behaviour changes:** the integration's **Configure** button is gone — use **Reconfigure** (⋮ menu on the integration) to change IP, port, credentials, circuits or polling interval. Entity **names** on the *Circuit N* and *DHW* devices no longer repeat the device name (e.g. "Circuit 1 Base Temperature" is now "Base Temperature" under the device *Circuit 1*, still displayed as "Circuit 1 Base Temperature"); existing entity IDs are unchanged. **Devices that no longer exist** (a circuit that is no longer active, a device left with no entity) are removed automatically at startup, together with their orphaned entities, and can be deleted from the UI. Under the hood: solar-dump state is kept per config entry, frames and parameters are typed, and `mypy` runs in CI. Restart Home Assistant after updating.
