@@ -12,11 +12,13 @@ from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
 from .config_flow import SERIAL_SLUG, _normalise_serial
 from .const import CONF_UPDATE_INTERVAL, DEFAULT_PORT, DOMAIN, UPDATE_INTERVAL
 from .coordinator import PlumDataUpdateCoordinator
+from .device import async_remove_stale_devices, is_stale_device
 from .plum_device import DEVICE_MAP_PATH, PlumDevice
 from .schedule import async_register_services as async_register_schedule_service
 from .schedule import async_unregister_services as async_unregister_schedule_service
@@ -118,9 +120,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool
     async_register_solar_dump_stop(hass, entry, coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    async_remove_stale_devices(hass, entry)
     await async_register_schedule_service(hass)
     await async_register_solar_dump_service(hass)
     return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: PlumConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Let the user delete a device from the UI only if it is no longer present.
+
+    Enables the "Delete" button on stale devices (e.g. a circuit that is no
+    longer active); live devices, and always the main boiler, stay protected.
+    """
+    return is_stale_device(hass, entry, device_entry)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool:
