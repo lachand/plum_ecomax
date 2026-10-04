@@ -24,199 +24,20 @@ import time
 import pytest
 
 from custom_components.plum_ecomax import plum_device as plum_device_module
-from custom_components.plum_ecomax.plum_device import (
-    CMD_READ_RESP,
+from custom_components.plum_ecomax.plum_device import PlumDevice
+from custom_components.plum_ecomax.protocol import (
     CMD_READ_VAL,
     CMD_WRITE_RESP,
     DEST_ID,
     SOURCE_ID,
-    PlumDevice,
+    crc16,
 )
+from tests.unit.wire_fixtures import SPEC_READ_RESPONSE, SPEC_WRITE_OK_RESPONSE
 
 
 def _make_device(**overrides) -> PlumDevice:
     device = PlumDevice("192.0.2.1", **overrides)
     return device
-
-
-# ---------------------------------------------------------------------------
-# _extract_valid_frame: ground-truth bytes from spec 1.5.3.12 (p.25)
-# ---------------------------------------------------------------------------
-
-# Response to cmd 0x43, session=0x003B (59), one block of 1 param (pid=16,
-# status=0x05, value=00 E0 2B 46) then one block of 3 params (pid=147..149).
-SPEC_READ_RESPONSE = bytes.fromhex(
-    "68"  # start
-    "2000"  # l_val = 0x0020 = 32
-    "0000"  # dest
-    "0100"  # src = 1 (boiler)
-    "C3"  # func = READ_RESP
-    "3B00"  # session = 59
-    "02"  # n_blocks = 2
-    "01"
-    "1000"  # block0: n_params=1, first_pid=16
-    "05"
-    "00E02B46"  # status=5, value (4 bytes)
-    "03"
-    "9300"  # block1: n_params=3, first_pid=147
-    "10"
-    "0F000000"  # status, value
-    "10"
-    "10000000"  # status, value
-    "10"
-    "0A00"  # status, value (2 bytes -- a different type)
-    "F14F"  # CRC
-    "16"  # stop
-)
-
-SPEC_WRITE_OK_RESPONSE = bytes.fromhex("680600000001 00A9E5FC1216".replace(" ", ""))
-
-
-class TestExtractValidFrame:
-    def test_parses_spec_worked_example(self):
-        device = _make_device()
-        func, payload = device._extract_valid_frame(bytearray(SPEC_READ_RESPONSE))
-
-        assert func == CMD_READ_RESP
-        session, n_blocks = struct.unpack("<HB", payload[0:3])
-        assert session == 59
-        assert n_blocks == 2
-        # Block 0: pid 16, status 5, value 00 E0 2B 46 (value starts right
-        # after the 1-byte status -- this is the offset that was wrong).
-        resp_pid = struct.unpack("<H", payload[4:6])[0]
-        assert resp_pid == 16
-        assert payload[6] == 0x05  # status byte, must NOT be mistaken for value
-        assert payload[7:11] == bytes.fromhex("00E02B46")
-
-    def test_skips_noise_prefix_with_coincidental_start_byte(self):
-        device = _make_device()
-        noisy = bytearray(b"\xab\xcd\x68\xff") + bytearray(SPEC_READ_RESPONSE)
-        result = device._extract_valid_frame(noisy)
-        assert result == device._extract_valid_frame(bytearray(SPEC_READ_RESPONSE))
-
-    def test_rejects_corrupted_crc(self):
-        device = _make_device()
-        corrupted = bytearray(SPEC_READ_RESPONSE)
-        corrupted[-3] ^= 0xFF  # flip a CRC byte
-        assert device._extract_valid_frame(corrupted) is None
-
-    def test_rejects_wrong_stop_byte(self):
-        device = _make_device()
-        corrupted = bytearray(SPEC_READ_RESPONSE)
-        corrupted[-1] = 0x00
-        assert device._extract_valid_frame(corrupted) is None
-
-    def test_incomplete_frame_returns_none_without_crashing(self):
-        device = _make_device()
-        truncated = bytearray(SPEC_READ_RESPONSE[:10])
-        assert device._extract_valid_frame(truncated) is None
-
-    def test_rejects_frame_from_wrong_source(self):
-        device = _make_device()
-        wrong_src = bytearray(SPEC_READ_RESPONSE)
-        # src field is at offset 5:7; DEST_ID is 1, so use 2 instead.
-        wrong_src[5:7] = struct.pack("<H", 2)
-        # Recompute CRC so only the source-address check can reject it.
-        body = bytes(wrong_src[1 : 1 + 2 + struct.unpack("<H", bytes(wrong_src[1:3]))[0]])
-        new_crc = device._crc16(body)
-        wrong_src[-3:-1] = struct.pack(">H", new_crc)
-        assert device._extract_valid_frame(wrong_src) is None
-
-    def test_write_ok_response_parses_as_single_result_byte(self):
-        device = _make_device()
-        func, payload = device._extract_valid_frame(bytearray(SPEC_WRITE_OK_RESPONSE))
-        assert func == CMD_WRITE_RESP
-        assert payload == b"\xe5"
-
-
-# ---------------------------------------------------------------------------
-# _encode / _decode: signed vs. unsigned per spec 1.4.2
-# ---------------------------------------------------------------------------
-
-
-class TestEncodeDecodeTypes:
-    @pytest.mark.parametrize(
-        "ptype,value,expected_hex",
-        [
-            ("BYTE", 255, "ff"),
-            ("SHORT_INT", -5, "fb"),
-            ("WORD", 40000, "409c"),  # > INT16 max, must not raise
-            ("INT", -100, "9cff"),
-            ("DWORD", 3_000_000_000, "005ed0b2"),  # > INT32 max, must not raise
-            ("LONG_INT", -2000000000, "006cca88"),
-            ("FLOAT", 20.5, None),  # checked separately (float roundtrip)
-        ],
-    )
-    def test_encode_matches_wire_format(self, ptype, value, expected_hex):
-        device = _make_device()
-        raw = device._encode(value, {"type": ptype, "exponent": 0})
-        if expected_hex is not None:
-            assert raw.hex() == expected_hex
-
-    def test_encode_float_roundtrips_through_decode(self):
-        device = _make_device()
-        raw = device._encode(20.5, {"type": "FLOAT", "exponent": 0})
-        assert device._decode(raw, {"type": "FLOAT", "exponent": 0}) == 20.5
-
-    def test_decode_short_int_is_signed(self):
-        device = _make_device()
-        # 0xFB = 251 unsigned, -5 signed -- must decode as -5.
-        assert device._decode(b"\xfb", {"type": "SHORT_INT", "exponent": 0}) == -5
-
-    def test_decode_word_is_unsigned(self):
-        device = _make_device()
-        raw = struct.pack("<H", 40000)
-        assert device._decode(raw, {"type": "WORD", "exponent": 0}) == 40000
-
-    def test_decode_dword_is_unsigned(self):
-        device = _make_device()
-        raw = struct.pack("<I", 3_000_000_000)
-        assert device._decode(raw, {"type": "DWORD", "exponent": 0}) == 3_000_000_000
-
-    def test_encode_decode_round_trip_with_exponent(self):
-        device = _make_device()
-        param_def = {"type": "SHORT_INT", "exponent": 1}
-        raw = device._encode(20.5, param_def)  # 20.5 / 10**1 = 2 (rounded, int-truncated)
-        assert device._decode(raw, param_def) == 20.0  # 2 * 10**1
-
-    def test_encode_unknown_type_returns_none(self):
-        device = _make_device()
-        assert device._encode(1, {"type": "NOPE", "exponent": 0}) is None
-
-    def test_decode_too_short_returns_none(self):
-        device = _make_device()
-        assert device._decode(b"", {"type": "FLOAT", "exponent": 0}) is None
-
-
-class TestRawStringType:
-    """RAW is the spec's STRING type (1.4.2): "a sequence of characters
-    followed by byte 00". Confirmed against real hardware -- the 'uid'
-    parameter's raw wire bytes decode to the boiler's actual serial number
-    once this type is handled (previously _decode had no RAW branch at
-    all, so every RAW-typed parameter silently decoded as None forever,
-    indistinguishable from a genuinely absent parameter).
-    """
-
-    def test_decode_stops_at_null_terminator(self):
-        device = _make_device()
-        raw = b"1M86DIP6H1GQE1H6P3KGIH5\x00\x00\x00"  # trailing padding after the string
-        assert device._decode(raw, {"type": "RAW", "exponent": 0}) == "1M86DIP6H1GQE1H6P3KGIH5"
-
-    def test_decode_without_trailing_null_still_works(self):
-        device = _make_device()
-        assert device._decode(b"circuit1", {"type": "RAW", "exponent": 0}) == "circuit1"
-
-    def test_encode_appends_null_terminator(self):
-        device = _make_device()
-        raw = device._encode("circuit1", {"type": "RAW", "exponent": 0})
-        assert raw == b"circuit1\x00"
-
-    def test_exponent_is_not_applied_to_strings(self):
-        # The exponent-scaling step in _decode/_encode guards on
-        # isinstance(val, (int, float)); a non-zero exponent on a RAW
-        # param must not raise or corrupt the string.
-        device = _make_device()
-        assert device._decode(b"abc\x00", {"type": "RAW", "exponent": 2}) == "abc"
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +146,7 @@ class TestSyncSetValue:
         frame = bytearray(SPEC_WRITE_OK_RESPONSE)
         frame[8] = 0x7D
         body = bytes(frame[1 : 1 + 2 + struct.unpack("<H", bytes(frame[1:3]))[0]])
-        new_crc = device._crc16(body)
+        new_crc = crc16(body)
         frame[-3:-1] = struct.pack(">H", new_crc)
         _patch_socket(monkeypatch, bytes(frame))
         assert await device._write_value_once(172, b"payload") is False
@@ -347,7 +168,7 @@ class TestSyncSetValue:
         device = _make_device()
         header = struct.pack("<HHHB", 5, SOURCE_ID, DEST_ID, CMD_WRITE_RESP)
         body = header  # no payload at all
-        crc = device._crc16(body)
+        crc = crc16(body)
         frame = b"\x68" + body + struct.pack(">H", crc) + b"\x16"
         _patch_socket(monkeypatch, frame)
         assert await device._write_value_once(172, b"payload") is True
@@ -543,7 +364,7 @@ class TestLastWriteError:
         frame = bytearray(SPEC_WRITE_OK_RESPONSE)
         frame[8] = 0x7D
         body = bytes(frame[1 : 1 + 2 + struct.unpack("<H", bytes(frame[1:3]))[0]])
-        frame[-3:-1] = struct.pack(">H", device._crc16(body))
+        frame[-3:-1] = struct.pack(">H", crc16(body))
         _patch_socket(monkeypatch, bytes(frame))
 
         assert await device._write_value_once(172, b"payload") is False
@@ -690,15 +511,3 @@ class TestAsyncTimeouts:
         assert await device._transaction(b"frame") is None
         assert attempts["n"] == 2
         assert device.consecutive_failures == 2
-
-
-class TestFrameType:
-    def test_extracted_frame_is_a_named_frame_and_still_unpacks_as_a_tuple(self):
-        device = _make_device()
-
-        frame = device._extract_valid_frame(bytearray(SPEC_READ_RESPONSE))
-
-        assert isinstance(frame, plum_device_module.Frame)
-        func, payload = frame  # existing call sites unpack it this way
-        assert (func, payload) == (frame.func, frame.payload)
-        assert func == CMD_READ_RESP
