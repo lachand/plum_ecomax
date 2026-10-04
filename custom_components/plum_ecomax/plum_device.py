@@ -17,6 +17,7 @@ import logging
 import socket
 import struct
 import time
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,10 @@ VALUE_BYTE_LEN = {
     "FLOAT": 4,
 }
 DEFAULT_BATCH_SIZE = 16
+
+
+# Bundled parameter map, resolved from this file rather than from the HA config dir.
+DEVICE_MAP_PATH = Path(__file__).parent / "device_map_ecomax360i.json"
 
 
 class PlumDevice:
@@ -107,7 +112,7 @@ class PlumDevice:
         try:
             with open(self.map_file) as f:
                 self.params_map = json.load(f)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error("Error loading map from %s: %s", self.map_file, e)
             raise
 
@@ -150,7 +155,7 @@ class PlumDevice:
             elif ptype == "RAW":
                 return str(value).encode("utf-8") + b"\x00"
             return None
-        except Exception:
+        except (ValueError, TypeError, OverflowError, struct.error):
             return None
 
     def _decode(self, data: bytes, param_def: dict) -> Any:
@@ -189,7 +194,7 @@ class PlumDevice:
                 val = val * (10**exp)
                 val = round(val, 2)
             return val
-        except Exception:
+        except (ValueError, TypeError, OverflowError, struct.error):
             return None
 
     # --- API ---

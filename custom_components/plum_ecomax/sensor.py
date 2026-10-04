@@ -23,6 +23,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -208,7 +209,7 @@ class PlumEcomaxSensor(CoordinatorEntity, SensorEntity):
         return None
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         """Links the sensor to the correct device (Boiler or Circuit).
 
         Returns:
@@ -232,7 +233,7 @@ class _PlumLinkHealthSensor(CoordinatorEntity, SensorEntity):
         self._entry_id = entry_id
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         return boiler_device_info(self._entry_id, self.coordinator.data.get("uid"))
 
 
@@ -289,7 +290,7 @@ class PlumSolarDumpRuntimeSensor(CoordinatorEntity, RestoreSensor, SensorEntity)
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_solar_dump_runtime_today"
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         return boiler_device_info(self._entry_id, self.coordinator.data.get("uid"))
 
     async def async_added_to_hass(self) -> None:

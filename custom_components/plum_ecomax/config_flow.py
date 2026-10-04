@@ -32,7 +32,7 @@ from .const import (
     MIN_UPDATE_INTERVAL,
     UPDATE_INTERVAL,
 )
-from .plum_device import PlumDevice
+from .plum_device import DEVICE_MAP_PATH, PlumDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]
         tuple: (error code to show on the form or None on success,
         the boiler's serial number if it could be read, else None).
     """
-    json_path = hass.config.path(f"custom_components/{DOMAIN}/device_map_ecomax360i.json")
+    json_path = str(DEVICE_MAP_PATH)
     device = PlumDevice(
         user_input[CONF_IP_ADDRESS],
         port=user_input.get(CONF_PORT, DEFAULT_PORT),
@@ -110,7 +110,7 @@ async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]
 
     try:
         await asyncio.to_thread(device.load_map)
-    except Exception as err:
+    except (OSError, ValueError) as err:
         _LOGGER.error("Could not load parameter map %s: %s", json_path, err)
         return "cannot_load_map", None
 

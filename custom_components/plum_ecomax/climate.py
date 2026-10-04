@@ -14,6 +14,7 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
@@ -102,7 +103,7 @@ class PlumEcomaxClimate(CoordinatorEntity, ClimateEntity):
         return f"{DOMAIN}_{self._entry_id}_circuit_{self._circuit_id}_climate"
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         """Links the entity to the device registry.
 
         Returns:

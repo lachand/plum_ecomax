@@ -16,7 +16,7 @@ from homeassistant.helpers import config_validation as cv
 from .config_flow import SERIAL_SLUG, _normalise_serial
 from .const import CONF_UPDATE_INTERVAL, DEFAULT_PORT, DOMAIN, UPDATE_INTERVAL
 from .coordinator import PlumDataUpdateCoordinator
-from .plum_device import PlumDevice
+from .plum_device import DEVICE_MAP_PATH, PlumDevice
 from .schedule import async_register_services as async_register_schedule_service
 from .schedule import async_unregister_services as async_unregister_schedule_service
 from .solar_dump import async_register_services as async_register_solar_dump_service
@@ -97,14 +97,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry):
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
     password = entry.data.get(CONF_PASSWORD, "0000")
 
-    filename = "device_map_ecomax360i.json"
-    json_path = hass.config.path(f"custom_components/{DOMAIN}/{filename}")
+    json_path = str(DEVICE_MAP_PATH)
 
     device = PlumDevice(ip, port=port, password=password, map_file=json_path)
 
     try:
         await asyncio.to_thread(device.load_map)
-    except Exception as err:
+    except (OSError, ValueError) as err:
         raise ConfigEntryNotReady(f"Could not load parameter map {json_path}: {err}") from err
 
     update_interval = entry.data.get(CONF_UPDATE_INTERVAL, UPDATE_INTERVAL)

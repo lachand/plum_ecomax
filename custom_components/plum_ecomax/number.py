@@ -10,6 +10,7 @@ import re
 
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN, NUMBER_TYPES, SOLAR_DUMP_NUMBERS
@@ -126,7 +127,7 @@ class PlumEcomaxNumber(CoordinatorEntity, NumberEntity):
             self._attr_entity_category = EntityCategory.CONFIG
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         """Links the entity to its Circuit, DHW, Mixers, or the main Boiler device.
 
         Previously every non-"mixer" slug fell through to the generic
@@ -227,7 +228,7 @@ class PlumSolarDumpNumber(RestoreNumber):
         self._attr_native_value = float(default)
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         return boiler_device_info(self._entry_id, self._coordinator.data.get("uid"))
 
     def _push(self) -> None:
