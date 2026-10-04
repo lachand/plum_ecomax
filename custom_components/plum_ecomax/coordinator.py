@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from datetime import timedelta
 
 # Conditional import for typing only
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -180,7 +180,18 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
         now = time.time()
 
         if not self.available_slugs:
-            await self._detect_available_parameters()
+            detect_error: Exception | None = None
+            try:
+                await self._detect_available_parameters()
+            except Exception as e:
+                detect_error = e
+            # Nothing detected means nothing could be read: the boiler is
+            # unreachable. Raising here (rather than carrying on with an empty
+            # parameter list) makes the first refresh fail with
+            # ConfigEntryNotReady, so the platforms are set up once the boiler
+            # answers instead of loading with no entities at all.
+            if not self.available_slugs:
+                self._link_lost(0, detect_error)
 
         # 1. Split into cache hits vs. slugs that need a fresh read.
         # STATIC_SLUGS (setpoints, curves, schedules, names) get the long
@@ -214,16 +225,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
             # unavailable (and first refresh raises ConfigEntryNotReady)
             # rather than serving stale cache indefinitely.
             if read_error is not None or not any(v is not None for v in raw_values.values()):
-                self._update_connection_issue()
-                if not self._link_down:
-                    _LOGGER.warning(
-                        "Lost communication with the boiler (%d parameters unread): %s",
-                        len(to_fetch),
-                        read_error or "no valid response",
-                    )
-                self._link_down = True
-                self._stretch_interval()
-                raise UpdateFailed("Boiler unreachable") from read_error
+                self._link_lost(len(to_fetch), read_error)
         if self._link_down:
             _LOGGER.info("Communication with the boiler restored")
             self._link_down = False
@@ -250,6 +252,20 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
 
         self._update_connection_issue()
         return data
+
+    def _link_lost(self, unread: int, cause: Exception | None) -> NoReturn:
+        """Record an outage (repair issue, one warning per outage, slower polling)
+        and abort the cycle with UpdateFailed."""
+        self._update_connection_issue()
+        if not self._link_down:
+            _LOGGER.warning(
+                "Lost communication with the boiler (%d parameters unread): %s",
+                unread,
+                cause or "no valid response",
+            )
+        self._link_down = True
+        self._stretch_interval()
+        raise UpdateFailed("Boiler unreachable") from cause
 
     def _stretch_interval(self) -> None:
         """Poll less often while the boiler is unreachable (doubling, capped at

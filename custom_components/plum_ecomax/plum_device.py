@@ -206,6 +206,8 @@ class PlumDevice:
                             self._data_cache[slug] = val
                     if len(values) >= len(chunk):
                         break
+                    if self._link_down_since(failures_at_start):
+                        break  # no point retrying a dead link; the loop above returns
                     await asyncio.sleep(0.2 * attempt)
 
             for slug in raw_slugs:

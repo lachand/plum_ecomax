@@ -522,3 +522,32 @@ class TestOutageBackoff:
         coordinator.device.get_values = AsyncMock(return_value={"tempcwu": 2})
         await coordinator._async_update_data()
         assert coordinator.update_interval == timedelta(seconds=30)
+
+
+class TestNothingDetectedAtStartup:
+    """If the initial scan reads nothing, the boiler is unreachable: the first
+    cycle must fail (-> ConfigEntryNotReady) instead of succeeding with an
+    empty parameter list and loading the entry with no entities.
+    """
+
+    async def test_empty_detection_raises_update_failed(self):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.params_map = {"tempcwu": {"id": 1, "type": "FLOAT", "exponent": 0}}
+        device.get_values = AsyncMock(return_value={})
+        coordinator = _make_coordinator(device=device, available_slugs=[])
+
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+
+        assert coordinator.available_slugs == []  # detection is retried next cycle
+
+    async def test_a_detection_error_is_reported_the_same_way(self):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.params_map = {"tempcwu": {"id": 1, "type": "FLOAT", "exponent": 0}}
+        device.get_values = AsyncMock(side_effect=OSError("down"))
+        coordinator = _make_coordinator(device=device, available_slugs=[])
+
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
