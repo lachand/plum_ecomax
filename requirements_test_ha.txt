@@ -1,0 +1,11 @@
+# Tests that run against a real Home Assistant (tests_ha/).
+#
+# Separate from requirements_test.txt on purpose: pytest-homeassistant-custom-
+# component pins its own exact pytest, pytest-asyncio and homeassistant
+# versions (one release per HA release), which conflicts with the floors in
+# requirements_test.txt. pip resolves the newest release that supports the
+# running Python, so the CI matrix (3.13 / 3.14) tests two real HA versions.
+#
+#   pip install -r requirements_test_ha.txt
+#   pytest tests_ha -p pytest_homeassistant_custom_component
+pytest-homeassistant-custom-component

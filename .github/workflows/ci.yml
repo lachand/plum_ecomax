@@ -39,8 +39,8 @@ jobs:
           cache: pip
           cache-dependency-path: requirements_test.txt
       - run: python -m pip install --upgrade pip ruff
-      - run: ruff check custom_components tests
-      - run: ruff format --check custom_components tests
+      - run: ruff check custom_components tests tests_ha
+      - run: ruff format --check custom_components tests tests_ha
 
   # 4. Static typing
   mypy:
@@ -57,7 +57,29 @@ jobs:
       - run: pip install -r requirements_test.txt
       - run: mypy
 
-  # 5. Unit Tests (Pytest)
+  # 5. Integration tests against a real Home Assistant (hass, registries, config
+  # flow manager) via pytest-homeassistant-custom-component. Own requirements
+  # file: the plugin pins pytest/HA versions that conflict with the unit-test
+  # job's. Matrix mirrors the unit tests (a different real HA per Python).
+  ha-tests:
+    name: Home Assistant tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements_test_ha.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements_test_ha.txt
+      - run: pytest tests_ha -p pytest_homeassistant_custom_component
+
+  # 6. Unit Tests (Pytest)
   #
   # Matrix: 3.13 resolves to the newest HA that still supports it
   # (~2026.7), 3.14 to HA 2026.8+ (which requires Python >=3.14.2). The old
