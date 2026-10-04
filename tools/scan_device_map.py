@@ -29,8 +29,8 @@ import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(REPO_ROOT / "custom_components" / "plum_ecomax"))
-from plum_device import PlumDevice  # noqa: E402
+sys.path.insert(0, str(REPO_ROOT))
+from custom_components.plum_ecomax.plum_device import PlumDevice  # noqa: E402
 
 MAP_FILE = REPO_ROOT / "custom_components" / "plum_ecomax" / "device_map_ecomax360i.json"
 KNOWN_GOOD_SAMPLE = ["tempcwu", "hdwstate", "hdwpumpforce", "hdwtsetpoint", "tempbuforup"]
