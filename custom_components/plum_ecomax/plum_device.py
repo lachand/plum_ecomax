@@ -305,16 +305,12 @@ class PlumDevice:
         if result is None:
             return None
 
-        func, resp = result
-        if func != CMD_READ_RESP or len(resp) < 7:
-            logger.debug(
-                "Unexpected read response for pid=%s: func=0x%02X len=%d", pid, func, len(resp)
-            )
-            # Wrong func or a too-short payload isn't a valid answer to
-            # this specific request -- on a persistent connection that
-            # means the stream is desynced (e.g. a stale/duplicate frame
-            # from an earlier request), not just "this pid had no data".
-            # Drop the connection so the next transaction starts clean.
+        # accept() already guaranteed the command and the echoed session id.
+        resp = result.payload
+        if len(resp) < 7:
+            logger.debug("Too-short read response for pid=%s: len=%d", pid, len(resp))
+            # A truncated payload isn't a valid answer to this request: drop the
+            # connection so the next transaction starts clean.
             self._close_connection()
             return None
 
@@ -337,14 +333,8 @@ class PlumDevice:
         if result is None:
             return False
 
-        func, resp = result
-        if func != CMD_WRITE_RESP:
-            logger.warning("Unexpected write response for pid=%s: func=0x%02X", pid, func)
-            # Not a valid answer to this write -- same reasoning as the
-            # read-side mismatch handling above: drop the connection
-            # rather than risk it being desynced for the next transaction.
-            self._close_connection()
-            return False
+        # accept() already guaranteed this is a write acknowledgement.
+        resp = result.payload
 
         # Data layout per spec 1.5.3.10: a single result code (0xE5=OK /
         # 0x7D=auth error / 0x7F=error). Confirmed against real hardware
@@ -396,18 +386,10 @@ class PlumDevice:
         if result is None:
             return {}
 
-        func, resp = result
-        if func != CMD_READ_RESP or len(resp) < 3:
-            logger.debug("Unexpected batch read response: func=0x%02X", func)
-            self._close_connection()
-            return {}
-
-        resp_session = struct.unpack("<H", resp[0:2])[0]
-        if resp_session != self.session_id:
-            logger.debug("Batch session mismatch: sent %s, got %s", self.session_id, resp_session)
-            # Unlike the block-shape check below, a session mismatch means
-            # this frame isn't even an answer to our own request -- treat
-            # it as a desynced stream, same as the func mismatch above.
+        # accept() already guaranteed the command and the echoed session id.
+        resp = result.payload
+        if len(resp) < 3:
+            logger.debug("Too-short batch read response: len=%d", len(resp))
             self._close_connection()
             return {}
 

@@ -804,3 +804,211 @@ class TestPartialBatchIsNotRetried:
         await device.get_values(list(device.params_map), retries=3)
 
         assert calls["n"] == 3
+
+
+class TestLoadMap:
+    def test_a_missing_map_file_raises_and_is_logged(self, caplog, tmp_path):
+        device = _make_device(map_file=str(tmp_path / "nope.json"))
+        with pytest.raises(OSError):
+            device.load_map()
+        assert "Error loading map" in caplog.text
+
+    def test_an_invalid_json_map_raises_value_error(self, tmp_path):
+        bad = tmp_path / "bad.json"
+        bad.write_text("{not json")
+        device = _make_device(map_file=str(bad))
+        with pytest.raises(ValueError):
+            device.load_map()
+
+    def test_a_valid_map_is_loaded(self, tmp_path):
+        good = tmp_path / "map.json"
+        good.write_text('{"x": {"id": 1, "type": "WORD", "exponent": 0}}')
+        device = _make_device(map_file=str(good))
+        device.load_map()
+        assert device.params_map["x"]["id"] == 1
+
+
+class TestGetValueFallbacks:
+    @staticmethod
+    def _device():
+        device = _make_device()
+        device.params_map = {"t": {"id": 5, "type": "WORD", "exponent": 0}}
+        return device
+
+    async def test_unknown_slug_returns_none(self):
+        assert await self._device().get_value("nope") is None
+
+    async def test_failed_reads_fall_back_to_the_last_known_value(self, monkeypatch):
+        device = self._device()
+        answers = iter([7, None, None])
+
+        async def _read(pid, param):
+            return next(answers)
+
+        async def _no_sleep(_s):
+            return None
+
+        monkeypatch.setattr(device, "_read_value_once", _read)
+        monkeypatch.setattr(plum_device_module.asyncio, "sleep", _no_sleep)
+
+        assert await device.get_value("t", retries=1) == 7  # fresh read, cached
+        assert await device.get_value("t", retries=2) == 7  # both attempts fail: cached value
+
+
+class TestSetValueGuards:
+    @staticmethod
+    def _device():
+        device = _make_device()
+        device.params_map = {"w": {"id": 9, "type": "WORD", "exponent": 0}}
+        return device
+
+    async def test_unknown_slug_is_refused(self):
+        assert await self._device().set_value("nope", 1) is False
+
+    async def test_a_value_that_cannot_be_encoded_is_refused_without_any_io(self, monkeypatch):
+        device = self._device()
+        called = []
+
+        async def _write(pid, payload):
+            called.append(pid)
+            return True
+
+        monkeypatch.setattr(device, "_write_value_once", _write)
+
+        assert await device.set_value("w", "not a number") is False
+        assert not called
+
+    async def test_three_unconfirmed_attempts_then_failure(self, monkeypatch):
+        device = self._device()
+        attempts = []
+
+        async def _write(pid, payload):
+            attempts.append(pid)
+            return False
+
+        async def _no_sleep(_s):
+            return None
+
+        monkeypatch.setattr(device, "_write_value_once", _write)
+        monkeypatch.setattr(plum_device_module.asyncio, "sleep", _no_sleep)
+
+        assert await device.set_value("w", 5) is False
+        assert len(attempts) == 3
+
+    async def test_credentials_are_sent_in_the_payload_and_can_be_overridden(self, monkeypatch):
+        device = _make_device(user="admin", password="0000")
+        device.params_map = {"w": {"id": 9, "type": "WORD", "exponent": 0}}
+        seen = []
+
+        async def _write(pid, payload):
+            seen.append(payload)
+            return True
+
+        monkeypatch.setattr(device, "_write_value_once", _write)
+
+        await device.set_value("w", 5)
+        await device.set_value("w", 5, user="USER-1", password="9999")
+
+        assert seen[0].startswith(b"admin\x00" + b"0000\x00")
+        assert seen[1].startswith(b"USER-1\x00" + b"9999\x00")
+
+
+def _answer(session, body=b""):
+    """A read answer carrying `session` followed by `body` (batch layout)."""
+    return response_frame(0xC3, struct.pack("<H", session) + body)
+
+
+class TestMalformedAnswers:
+    """accept() guarantees the command and session; what's left to check is the
+    payload's own shape."""
+
+    async def test_a_too_short_single_read_drops_the_connection(self, monkeypatch):
+        device = _make_device()
+        opened = _connections(monkeypatch, lambda: _ScriptedStream(lambda s: [_answer(s, b"\x01")]))
+
+        assert await device._read_value_once(16, _PARAM) is None
+        assert opened[0].closed and device._writer is None
+
+    async def test_an_answer_for_another_pid_drops_the_connection(self, monkeypatch):
+        device = _make_device()
+        # session | nblocks=1 nparams=1 | pid=99 | status | value(4)
+        body = b"\x01\x01" + struct.pack("<H", 99) + b"\x00" + b"\x01\x00\x00\x00"
+        opened = _connections(monkeypatch, lambda: _ScriptedStream(lambda s: [_answer(s, body)]))
+
+        assert await device._read_value_once(16, _PARAM) is None
+        assert opened[0].closed
+
+    async def test_a_too_short_batch_answer_drops_the_connection(self, monkeypatch):
+        device = _make_device()
+        opened = _connections(monkeypatch, lambda: _ScriptedStream(lambda s: [_answer(s)]))
+
+        assert await device._read_values_batch([(16, _PARAM)]) == {}
+        assert opened[0].closed
+
+    @pytest.mark.parametrize(
+        "body,expected",
+        [
+            # block header cut short after the first block
+            (
+                b"\x02" + b"\x01" + struct.pack("<H", 16) + b"\x00" + b"\x2a\x00\x00\x00" + b"\x01",
+                {16: 42},
+            ),
+            # a block announcing 2 params: width unknowable, stop trusting the rest
+            (b"\x01" + b"\x02" + struct.pack("<H", 16) + b"\x00" + b"\x2a\x00\x00\x00", {}),
+            # a block for a pid we never asked about
+            (b"\x01" + b"\x01" + struct.pack("<H", 77) + b"\x00" + b"\x2a\x00\x00\x00", {}),
+            # value cut off mid-block
+            (b"\x01" + b"\x01" + struct.pack("<H", 16) + b"\x00" + b"\x2a\x00", {}),
+        ],
+    )
+    async def test_truncated_or_odd_batch_blocks_keep_what_was_parsed(
+        self, monkeypatch, body, expected
+    ):
+        device = _make_device()
+        _connections(monkeypatch, lambda: _ScriptedStream(lambda s: [_answer(s, body)]))
+
+        assert await device._read_values_batch([(16, _PARAM)]) == expected
+
+    async def test_a_batch_with_no_items_does_no_io(self, monkeypatch):
+        device = _make_device()
+        opened = _connections(monkeypatch, lambda: _ScriptedStream(lambda s: []))
+
+        assert await device._read_values_batch([]) == {}
+        assert not opened
+
+
+class TestAsyncClose:
+    async def test_without_a_connection_it_is_a_no_op(self):
+        device = _make_device()
+        await device.async_close()
+        assert device._writer is None
+
+    async def test_it_closes_and_waits_for_the_transport(self, monkeypatch):
+        device = _make_device()
+        waited = []
+
+        class _Stream(_HangingStream):
+            async def wait_closed(self):
+                waited.append(True)
+
+        stream = _Stream()
+        _install_open_connection(monkeypatch, lambda: stream)
+        await device._ensure_connection()
+
+        await device.async_close()
+
+        assert stream.closed and waited and device._writer is None
+
+    async def test_a_transport_error_while_closing_is_swallowed(self, monkeypatch):
+        device = _make_device()
+
+        class _Stream(_HangingStream):
+            async def wait_closed(self):
+                raise OSError("already reset")
+
+        _install_open_connection(monkeypatch, lambda: _Stream())
+        await device._ensure_connection()
+
+        await device.async_close()  # must not raise
+
+        assert device._writer is None
