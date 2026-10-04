@@ -34,7 +34,7 @@ from . import PlumConfigEntry
 from .const import CONF_ACTIVE_CIRCUITS, DIAGNOSTIC_SENSOR_SLUGS, DOMAIN, SENSOR_TYPES
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, circuit_device_info
-from .solar_dump import auto_runtime_minutes, auto_seed_runtime
+from .solar_dump_auto import auto_runtime_minutes, auto_seed_runtime
 
 _LOGGER = logging.getLogger(__name__)
 

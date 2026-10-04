@@ -23,9 +23,9 @@ from .schedule import async_register_services as async_register_schedule_service
 from .schedule import async_unregister_services as async_unregister_schedule_service
 from .solar_dump import async_register_services as async_register_solar_dump_service
 from .solar_dump import async_register_stop_listener as async_register_solar_dump_stop
-from .solar_dump import async_stop_auto as async_stop_solar_dump_auto
 from .solar_dump import async_stop_for_entry as async_stop_solar_dump
 from .solar_dump import async_unregister_services as async_unregister_solar_dump_service
+from .solar_dump_auto import async_stop_auto as async_stop_solar_dump_auto
 
 _LOGGER = logging.getLogger(__name__)
 

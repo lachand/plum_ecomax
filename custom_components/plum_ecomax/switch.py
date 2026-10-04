@@ -20,12 +20,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import CONFIG_SWITCHES, DOMAIN, SWITCH_TYPES
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, hdw_device_info
-from .solar_dump import (
-    async_auto_disable,
-    async_auto_enable,
-    async_start_hold,
-    async_stop_for_entry,
-)
+from .solar_dump import async_start_hold, async_stop_for_entry
+from .solar_dump_auto import async_auto_disable, async_auto_enable
 
 HDW_SWITCHES = {"hdwstartoneloading", "hdwpumpforce", "hdwstartlegion"}
 

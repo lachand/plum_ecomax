@@ -14,9 +14,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.plum_ecomax import solar_dump
+from custom_components.plum_ecomax import solar_dump_auto
 from custom_components.plum_ecomax.const import AUTO_MIN_REST_SECONDS, AUTO_MIN_RUN_SECONDS
-from custom_components.plum_ecomax.solar_dump import SolarDumpState, _auto_tick
+from custom_components.plum_ecomax.solar_dump import SolarDumpState
+from custom_components.plum_ecomax.solar_dump_auto import _auto_tick
 
 # One shared state: the tests call _tick() with a fresh coordinator each time
 # but expect the controller's bookkeeping to carry over between ticks, so every
@@ -64,10 +65,10 @@ def env():
     start.side_effect = _fake_start
     stop.side_effect = _fake_stop
     with (
-        patch.object(solar_dump, "async_start_hold", start),
-        patch.object(solar_dump, "async_stop_for_entry", stop),
-        patch.object(solar_dump.time, "monotonic", lambda: clk.mono),
-        patch.object(solar_dump.dt_util, "now", lambda: clk.wall),
+        patch.object(solar_dump_auto, "async_start_hold", start),
+        patch.object(solar_dump_auto, "async_stop_for_entry", stop),
+        patch.object(solar_dump_auto.time, "monotonic", lambda: clk.mono),
+        patch.object(solar_dump_auto.dt_util, "now", lambda: clk.wall),
     ):
         yield clk, start, stop
     _STATE.__init__()
@@ -150,7 +151,7 @@ async def test_min_rest_blocks_an_immediate_restart(env):
 @pytest.mark.asyncio
 async def test_daily_budget_caps_bursts(env):
     _clk, start, _stop = env
-    _STATE.auto = solar_dump._fresh_auto_state()
+    _STATE.auto = solar_dump_auto._fresh_auto_state()
     _STATE.auto["runtime_today"] = 130  # over the 120 default
     await _tick(_coord(ecs=70, buffer=40, budget=120))
     start.assert_not_awaited()
@@ -194,13 +195,13 @@ async def test_runtime_accumulates_across_a_burst(env):
     c = _coord(ecs=48, buffer=49)
     await _tick(c)  # normal stop (MIN_RUN satisfied)
     assert 9.5 <= _STATE.auto["runtime_today"] <= 10.5
-    assert 9.5 <= solar_dump.auto_runtime_minutes(c) <= 10.5
+    assert 9.5 <= solar_dump_auto.auto_runtime_minutes(c) <= 10.5
 
 
 @pytest.mark.asyncio
 async def test_midnight_rollover_resets_runtime(env):
     clk, _s, _st = env
-    _STATE.auto = solar_dump._fresh_auto_state()
+    _STATE.auto = solar_dump_auto._fresh_auto_state()
     _STATE.auto["runtime_today"] = 90
     _STATE.auto["day"] = clk.wall.date()
     clk.advance(86400)  # next day

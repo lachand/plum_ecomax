@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 
-from custom_components.plum_ecomax import solar_dump
+from custom_components.plum_ecomax import solar_dump, solar_dump_auto
 
 
 def _coord(entry_id="e1"):
@@ -20,11 +20,11 @@ def _coord(entry_id="e1"):
 def test_two_boilers_do_not_share_state():
     a, b = _coord("a"), _coord("b")
     solar_dump._state(a).owner = "auto"
-    solar_dump._auto_state(a)["runtime_today"] = 42.0
+    solar_dump_auto._auto_state(a)["runtime_today"] = 42.0
 
     assert solar_dump._state(b).owner is None
-    assert solar_dump.auto_runtime_minutes(b) == 0.0
-    assert solar_dump.auto_runtime_minutes(a) == 42.0
+    assert solar_dump_auto.auto_runtime_minutes(b) == 0.0
+    assert solar_dump_auto.auto_runtime_minutes(a) == 42.0
 
 
 def test_state_is_created_once_per_coordinator():
@@ -52,17 +52,17 @@ async def test_auto_tick_unsub_is_hooked_to_the_entry_once_and_is_idempotent():
     hass, coord = MagicMock(), _coord()
     unsub = MagicMock()
     with (
-        patch.object(solar_dump, "async_track_time_interval", return_value=unsub),
-        patch.object(solar_dump, "_auto_tick", AsyncMock()),
+        patch.object(solar_dump_auto, "async_track_time_interval", return_value=unsub),
+        patch.object(solar_dump_auto, "_auto_tick", AsyncMock()),
     ):
-        await solar_dump.async_auto_enable(hass, coord, "e1")
-        await solar_dump.async_auto_disable(hass, coord)
-        await solar_dump.async_auto_enable(hass, coord, "e1")
+        await solar_dump_auto.async_auto_enable(hass, coord, "e1")
+        await solar_dump_auto.async_auto_disable(hass, coord)
+        await solar_dump_auto.async_auto_enable(hass, coord, "e1")
 
     # registered with the entry exactly once despite the enable/disable/enable
     assert coord.config_entry.async_on_unload.call_count == 1
 
     # the hooked callback is harmless after the tick was already dropped
-    solar_dump._drop_auto_tick(coord)
-    solar_dump._drop_auto_tick(coord)
+    solar_dump_auto._drop_auto_tick(coord)
+    solar_dump_auto._drop_auto_tick(coord)
     assert unsub.call_count == 2  # one per armed period, never a double cancel
