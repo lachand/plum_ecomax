@@ -19,24 +19,36 @@ from __future__ import annotations
 
 import asyncio
 import struct
-import time
 
 import pytest
 
 from custom_components.plum_ecomax import plum_device as plum_device_module
 from custom_components.plum_ecomax.plum_device import PlumDevice
 from custom_components.plum_ecomax.protocol import (
-    CMD_READ_VAL,
     CMD_WRITE_RESP,
     DEST_ID,
     SOURCE_ID,
     crc16,
 )
+from tests.unit.fake_streams import (
+    _BROADCAST,
+    _PARAM,
+    _PID16_VALUE,
+    _ConcurrencyTrackingStream,
+    _connections,
+    _FakeStream,
+    _install_open_connection,
+    _MultiTransactionStream,
+    _noop,
+    _patch_counting_socket,
+    _patch_socket,
+    _RaisingOnWriteStream,
+    _ScriptedStream,
+)
 from tests.unit.wire_fixtures import (
     SPEC_READ_RESPONSE,
     SPEC_WRITE_OK_RESPONSE,
     response_frame,
-    session_of_request,
     with_session,
 )
 
@@ -49,73 +61,6 @@ def _make_device(**overrides) -> PlumDevice:
 # ---------------------------------------------------------------------------
 # get_value / set_value via a fake socket (no real network)
 # ---------------------------------------------------------------------------
-
-
-class _FakeStream:
-    """Stands in for an asyncio (reader, writer) pair: scripts one response
-    per connection, delivered as pre-chunked bytes, and records what was
-    written.
-    """
-
-    def __init__(self, response: bytes | None, chunk_size: int = 4096):
-        self._response = response
-        self._chunk_size = chunk_size
-        self._pos = 0
-        self.sent: list[bytes] = []
-        self.closed = False
-
-    def write(self, data: bytes):
-        self.sent.append(data)
-        # Like the real boiler, answer a read with the request's own session id.
-        if self._response is not None and self._response[7] == 0xC3:
-            self._response = with_session(self._response, session_of_request(data))
-
-    async def drain(self):
-        pass
-
-    async def read(self, _n: int) -> bytes:
-        if self._response is None or self._pos >= len(self._response):
-            return b""
-        chunk = self._response[self._pos : self._pos + self._chunk_size]
-        self._pos += len(chunk)
-        return chunk
-
-    def close(self):
-        self.closed = True
-
-    async def wait_closed(self):
-        pass
-
-
-def _install_open_connection(monkeypatch, factory):
-    """Route asyncio.open_connection to `factory() -> stream` (reader and
-    writer being the same fake object)."""
-
-    async def _open(*_a, **_k):
-        stream = factory()
-        return stream, stream
-
-    monkeypatch.setattr(asyncio, "open_connection", _open)
-
-
-def _patch_socket(monkeypatch, response: bytes | None, chunk_size: int = 4096):
-    _install_open_connection(monkeypatch, lambda: _FakeStream(response, chunk_size=chunk_size))
-
-
-def _patch_counting_socket(monkeypatch, response: bytes | None):
-    """Like _patch_socket, but every connection attempt is counted and gets
-    its own fresh _FakeStream instance -- used by the persistent-connection
-    tests below to prove whether a connection was reused (factory called
-    once) or reopened (factory called again).
-    """
-    calls = {"count": 0}
-
-    def _factory():
-        calls["count"] += 1
-        return _FakeStream(response)
-
-    _install_open_connection(monkeypatch, _factory)
-    return calls
 
 
 class TestReadValueOnce:
@@ -254,55 +199,6 @@ class TestGetValuesRawRouting:
 # ---------------------------------------------------------------------------
 
 
-class _RaisingOnWriteStream:
-    """Stands in for a persistent connection that has silently died (e.g.
-    the boiler closed our idle connection): the write itself raises, as it
-    would for a genuinely broken pipe/reset connection.
-    """
-
-    def write(self, _data):
-        raise OSError("simulated dead connection")
-
-    async def drain(self):
-        pass
-
-    async def read(self, _n):
-        return b""
-
-    def close(self):
-        pass
-
-
-class _MultiTransactionStream:
-    """Delivers one complete response per write()->read() round, replayed
-    fresh for each request. Unlike _FakeStream's single pre-scripted
-    buffer, this doesn't pretend a second response is already sitting in
-    the stream before the second request was even sent -- a real boiler
-    can't answer request #2 before receiving it, so pre-concatenating two
-    responses doesn't model a real persistent connection's timing.
-    """
-
-    def __init__(self, response: bytes):
-        self._base = response
-        self._response = response
-        self._pos = 0
-
-    def write(self, data):
-        self._response = with_session(self._base, session_of_request(data))
-        self._pos = 0  # a fresh, complete response becomes available
-
-    async def drain(self):
-        pass
-
-    async def read(self, n):
-        chunk = self._response[self._pos : self._pos + n]
-        self._pos += len(chunk)
-        return chunk
-
-    def close(self):
-        pass
-
-
 class TestPersistentConnection:
     async def test_connection_is_reused_across_successful_transactions(self, monkeypatch):
         device = _make_device()
@@ -348,9 +244,9 @@ class TestPersistentConnection:
         calls = _patch_counting_socket(monkeypatch, SPEC_READ_RESPONSE)
 
         await device._read_value_once(16, {"type": "DWORD", "exponent": 0})
-        assert device._writer is not None
+        assert device._transport._writer is not None
         device.close()
-        assert device._writer is None
+        assert device._transport._writer is None
 
         await device._read_value_once(16, {"type": "DWORD", "exponent": 0})
         assert calls["count"] == 2
@@ -367,6 +263,20 @@ class TestPersistentConnection:
         _patch_socket(monkeypatch, SPEC_READ_RESPONSE)
         await device._read_value_once(16, {"type": "DWORD", "exponent": 0})
         assert device.consecutive_failures == 0
+
+
+class TestConnectionAfterTimeouts:
+    async def test_a_success_between_timeouts_keeps_the_connection(self, monkeypatch):
+        device = _make_device()
+        _connections(
+            monkeypatch,
+            lambda: _ScriptedStream(lambda s: [with_session(SPEC_READ_RESPONSE, s)]),
+        )
+        device.consecutive_failures = 1  # one earlier timeout
+
+        assert await device._read_value_once(16, _PARAM) == _PID16_VALUE
+
+        assert device.consecutive_failures == 0 and device._transport._writer is not None
 
 
 class TestLastWriteError:
@@ -396,52 +306,6 @@ class TestLastWriteError:
 # ---------------------------------------------------------------------------
 
 
-class _ConcurrencyTrackingStream:
-    """Fake connection that answers a read or a write appropriately (based
-    on the func byte it was sent) and records the peak number of
-    simultaneously-open transactions.
-
-    The "occupied" window is bracketed by write() -> read() (a transaction
-    actually in flight on the wire), not by connect()/close(): the
-    persistent-connection PlumDevice keeps a successful connection open
-    across transactions instead of closing it every time, so close() is not
-    a reliable "this transaction is done" signal.
-    """
-
-    active = 0
-    max_concurrent = 0
-
-    def __init__(self):
-        self._sent_frame: bytes | None = None
-        self._responded = False
-
-    def write(self, data: bytes):
-        self._sent_frame = data
-        cls = _ConcurrencyTrackingStream
-        cls.active += 1
-        cls.max_concurrent = max(cls.max_concurrent, cls.active)
-
-    async def drain(self):
-        await asyncio.sleep(0.05)  # hold the "connection" open long enough to overlap if unlocked
-
-    async def read(self, _n):
-        # Decrement unconditionally: write() always increments once, and a
-        # reused-but-already-answered instance (persistent connection
-        # picked up stale, gets the "closed" b"" signal, see plum_device's
-        # _read_response) still needs its matching decrement.
-        _ConcurrencyTrackingStream.active -= 1
-        if self._responded:
-            return b""
-        self._responded = True
-        func = self._sent_frame[7]
-        if func == CMD_READ_VAL:
-            return with_session(SPEC_READ_RESPONSE, session_of_request(self._sent_frame))
-        return SPEC_WRITE_OK_RESPONSE
-
-    def close(self):
-        pass
-
-
 class TestIoSerialization:
     @pytest.mark.asyncio
     async def test_concurrent_get_and_set_never_overlap_on_the_wire(self, monkeypatch):
@@ -459,98 +323,6 @@ class TestIoSerialization:
         )
 
         assert _ConcurrencyTrackingStream.max_concurrent == 1
-
-
-class _HangingStream:
-    """Accepts writes but never answers -- a stalled boiler."""
-
-    closed = False
-
-    def write(self, _data):
-        pass
-
-    async def drain(self):
-        pass
-
-    async def read(self, _n):
-        await asyncio.sleep(30)
-        return b""
-
-    def close(self):
-        self.closed = True
-
-
-class TestAsyncTimeouts:
-    async def test_stalled_peer_times_out_and_keeps_the_connection_the_first_time(
-        self, monkeypatch
-    ):
-        device = _make_device()
-        stream = _HangingStream()
-        _install_open_connection(monkeypatch, lambda: stream)
-
-        started = time.monotonic()
-        result = await device._transaction(b"frame", timeout=0.05)
-
-        assert result is None
-        assert time.monotonic() - started < 1.0  # bounded by asyncio.timeout, not by 30s
-        assert device.consecutive_failures == 1
-        # A late answer can't be mistaken for the next one (matched by session),
-        # so the connection is kept rather than paying a ~1 s reconnection.
-        assert not stream.closed and device._writer is not None
-
-    async def test_a_second_consecutive_timeout_drops_the_connection(self, monkeypatch):
-        device = _make_device()
-        stream = _HangingStream()
-        _install_open_connection(monkeypatch, lambda: stream)
-
-        await device._transaction(b"frame", timeout=0.05)
-        await device._transaction(b"frame", timeout=0.05)
-
-        assert device.consecutive_failures == 2
-        assert stream.closed and device._writer is None
-
-    async def test_a_success_between_timeouts_keeps_the_connection(self, monkeypatch):
-        device = _make_device()
-        _connections(
-            monkeypatch,
-            lambda: _ScriptedStream(lambda s: [with_session(SPEC_READ_RESPONSE, s)]),
-        )
-        device.consecutive_failures = 1  # one earlier timeout
-
-        assert await device._read_value_once(16, _PARAM) == _PID16_VALUE
-
-        assert device.consecutive_failures == 0 and device._writer is not None
-
-    async def test_cancelled_transaction_closes_the_connection(self, monkeypatch):
-        # A late answer to an abandoned request would be misread as the
-        # reply to the next one, so a cancelled exchange must not leave the
-        # connection open.
-        device = _make_device()
-        stream = _HangingStream()
-        _install_open_connection(monkeypatch, lambda: stream)
-
-        task = asyncio.ensure_future(device._transaction(b"frame", timeout=30))
-        await asyncio.sleep(0.05)
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
-
-        assert stream.closed and device._writer is None
-
-    async def test_connect_timeout_counts_as_failure_and_retries_once(self, monkeypatch):
-        device = _make_device()
-        monkeypatch.setattr(plum_device_module, "CONNECT_TIMEOUT", 0.05)
-        attempts = {"n": 0}
-
-        async def _never_connects(*_a, **_k):
-            attempts["n"] += 1
-            await asyncio.sleep(30)
-
-        monkeypatch.setattr(asyncio, "open_connection", _never_connects)
-
-        assert await device._transaction(b"frame") is None
-        assert attempts["n"] == 2
-        assert device.consecutive_failures == 2
 
 
 class TestFailFastOnDeadLink:
@@ -601,55 +373,6 @@ class TestFailFastOnDeadLink:
         assert calls["n"] == 4  # 2 batches x 2 attempts, none skipped
 
 
-async def _noop():
-    return None
-
-
-class _ScriptedStream:
-    """Answers each request with `script(session) -> [frames]`, delivered in
-    order; `hang` makes it go silent afterwards (a boiler that never answers)."""
-
-    def __init__(self, script, hang=False):
-        self._script = script
-        self._hang = hang
-        self._pending = b""
-        self.closed = False
-
-    def write(self, data):
-        self._pending += b"".join(self._script(session_of_request(data)))
-
-    async def drain(self):
-        pass
-
-    async def read(self, n):
-        if self._pending:
-            chunk, self._pending = self._pending[:n], self._pending[n:]
-            return chunk
-        if self._hang:
-            await asyncio.sleep(30)
-        return b""
-
-    def close(self):
-        self.closed = True
-
-
-_BROADCAST = response_frame(0xC0, b"\x11" * 300)  # unsolicited stream frame, func 0xC0
-_PID16_VALUE = struct.unpack("<I", bytes.fromhex("00E02B46"))[0]
-_PARAM = {"type": "DWORD", "exponent": 0}
-
-
-def _connections(monkeypatch, make_stream):
-    opened = []
-
-    def _factory():
-        stream = make_stream()
-        opened.append(stream)
-        return stream
-
-    _install_open_connection(monkeypatch, _factory)
-    return opened
-
-
 class TestUnsolicitedFrames:
     """The module interleaves 0xC0 broadcasts and duplicates of its answers with
     the real response: they must be skipped, not treated as a desync that closes
@@ -689,25 +412,6 @@ class TestUnsolicitedFrames:
 
         assert len(opened) == 1 and not opened[0].closed
 
-    async def test_only_unrelated_frames_time_out_without_dropping_the_connection(
-        self, monkeypatch
-    ):
-        device = _make_device()
-        opened = _connections(
-            monkeypatch, lambda: _ScriptedStream(lambda s: [_BROADCAST, _BROADCAST], hang=True)
-        )
-        device.session_id = 41
-
-        result = await device._transaction(
-            b"frame\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-            timeout=0.05,
-            accept=device._read_answer_to(42),
-        )
-
-        assert result is None
-        assert not opened[0].closed and device._writer is not None  # first failure: kept
-        assert device.consecutive_failures == 1
-
     async def test_a_write_acknowledgement_is_picked_out_of_the_broadcasts(self, monkeypatch):
         device = _make_device()
         _connections(
@@ -731,35 +435,6 @@ class TestUnsolicitedFrames:
         values = await device._read_values_batch(items)
 
         assert values == {16: _PID16_VALUE}
-
-    @pytest.mark.parametrize("noise_byte", [0x00, 0x68])  # no start byte / only false starts
-    async def test_a_long_stream_of_noise_does_not_grow_the_buffer_without_bound(
-        self, monkeypatch, noise_byte
-    ):
-        monkeypatch.setattr(plum_device_module, "MAX_RESPONSE_BUFFER", 16384)
-        device = _make_device()
-        noise = bytes([noise_byte]) * 1024
-        sent = {"n": 0}
-        longest = {"n": 0}
-        original = plum_device_module.pop_valid_frame
-
-        def _spy(buffer):
-            longest["n"] = max(longest["n"], len(buffer))
-            return original(buffer)
-
-        monkeypatch.setattr(plum_device_module, "pop_valid_frame", _spy)
-
-        class _Noisy(_ScriptedStream):
-            async def read(self, n):
-                if sent["n"] < 64:  # 64 KiB of noise before the real answer
-                    sent["n"] += 1
-                    return noise
-                return await super().read(n)
-
-        _connections(monkeypatch, lambda: _Noisy(lambda s: [with_session(SPEC_READ_RESPONSE, s)]))
-
-        assert await device._read_value_once(16, _PARAM) == _PID16_VALUE
-        assert longest["n"] <= 16384 + 1024  # trimmed once it passed the cap
 
 
 class TestPartialBatchIsNotRetried:
@@ -927,7 +602,7 @@ class TestMalformedAnswers:
         opened = _connections(monkeypatch, lambda: _ScriptedStream(lambda s: [_answer(s, b"\x01")]))
 
         assert await device._read_value_once(16, _PARAM) is None
-        assert opened[0].closed and device._writer is None
+        assert opened[0].closed and device._transport._writer is None
 
     async def test_an_answer_for_another_pid_drops_the_connection(self, monkeypatch):
         device = _make_device()
@@ -975,40 +650,3 @@ class TestMalformedAnswers:
 
         assert await device._read_values_batch([]) == {}
         assert not opened
-
-
-class TestAsyncClose:
-    async def test_without_a_connection_it_is_a_no_op(self):
-        device = _make_device()
-        await device.async_close()
-        assert device._writer is None
-
-    async def test_it_closes_and_waits_for_the_transport(self, monkeypatch):
-        device = _make_device()
-        waited = []
-
-        class _Stream(_HangingStream):
-            async def wait_closed(self):
-                waited.append(True)
-
-        stream = _Stream()
-        _install_open_connection(monkeypatch, lambda: stream)
-        await device._ensure_connection()
-
-        await device.async_close()
-
-        assert stream.closed and waited and device._writer is None
-
-    async def test_a_transport_error_while_closing_is_swallowed(self, monkeypatch):
-        device = _make_device()
-
-        class _Stream(_HangingStream):
-            async def wait_closed(self):
-                raise OSError("already reset")
-
-        _install_open_connection(monkeypatch, lambda: _Stream())
-        await device._ensure_connection()
-
-        await device.async_close()  # must not raise
-
-        assert device._writer is None
