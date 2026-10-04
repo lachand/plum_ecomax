@@ -511,3 +511,55 @@ class TestAsyncTimeouts:
         assert await device._transaction(b"frame") is None
         assert attempts["n"] == 2
         assert device.consecutive_failures == 2
+
+
+class TestFailFastOnDeadLink:
+    """get_values() gives up on the remaining batches once the link is clearly
+    down, instead of paying CONNECT_TIMEOUT-sized waits for every batch."""
+
+    @staticmethod
+    def _device_with_many_params(n=64):
+        device = _make_device()
+        device.params_map = {
+            f"p{i}": {"id": i, "type": "WORD", "exponent": 0, "unit": "", "name_orig": ""}
+            for i in range(n)
+        }
+        return device
+
+    async def test_dead_link_stops_after_the_failure_threshold(self, monkeypatch):
+        device = self._device_with_many_params(64)  # 4 batches of 16
+        attempts = {"n": 0}
+
+        async def _refuse(*_a, **_k):
+            attempts["n"] += 1
+            raise ConnectionRefusedError("down")
+
+        monkeypatch.setattr(asyncio, "open_connection", _refuse)
+        monkeypatch.setattr(plum_device_module.asyncio, "sleep", lambda _s: _noop())
+
+        results = await device.get_values(list(device.params_map), retries=2)
+
+        assert results == {}
+        # one batch = 2 attempts x 2 connection tries = 4 failures = the threshold;
+        # without the fail-fast the other 3 batches would add 12 more attempts.
+        assert attempts["n"] == plum_device_module.LINK_DOWN_FAILURES
+
+    async def test_a_reachable_boiler_that_answers_garbage_is_not_cut_short(self, monkeypatch):
+        # Invalid answers don't count as link failures, so every batch is still tried.
+        device = self._device_with_many_params(32)  # 2 batches
+        calls = {"n": 0}
+
+        async def _empty_batch(items):
+            calls["n"] += 1
+            return {}
+
+        monkeypatch.setattr(device, "_read_values_batch", _empty_batch)
+        monkeypatch.setattr(plum_device_module.asyncio, "sleep", lambda _s: _noop())
+
+        await device.get_values(list(device.params_map), retries=2)
+
+        assert calls["n"] == 4  # 2 batches x 2 attempts, none skipped
+
+
+async def _noop():
+    return None

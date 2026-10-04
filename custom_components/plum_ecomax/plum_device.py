@@ -33,6 +33,12 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 16
 
+# Failed transactions (connect error / timeout, not an invalid answer) within one
+# get_values() cycle after which the link is considered down and the remaining
+# batches are skipped: each failed attempt can cost up to CONNECT_TIMEOUT, so
+# without this a cycle over many batches would take minutes to give up.
+LINK_DOWN_FAILURES = 4
+
 # Seconds allowed to open the TCP connection to the module.
 CONNECT_TIMEOUT = 5.0
 
@@ -177,7 +183,10 @@ class PlumDevice:
 
         results: dict[str, Any] = {}
         async with self._io_lock:
+            failures_at_start = self.consecutive_failures
             for i in range(0, len(items), batch_size):
+                if self._link_down_since(failures_at_start):
+                    return results
                 chunk = items[i : i + batch_size]
                 for attempt in range(1, retries + 1):
                     values = await self._read_values_batch(chunk)
@@ -193,6 +202,8 @@ class PlumDevice:
                     await asyncio.sleep(0.2 * attempt)
 
             for slug in raw_slugs:
+                if self._link_down_since(failures_at_start):
+                    return results
                 param = self.params_map[slug]
                 pid = param["id"]
                 for attempt in range(1, retries + 1):
@@ -204,6 +215,18 @@ class PlumDevice:
                     await asyncio.sleep(0.2 * attempt)
 
         return results
+
+    def _link_down_since(self, failures_at_start: int) -> bool:
+        """True once LINK_DOWN_FAILURES transactions failed since the baseline.
+
+        consecutive_failures counts connect errors and timeouts only (an
+        invalid or mismatched answer doesn't increment it), so a batch
+        failing because the boiler dislikes one pid can't trip this.
+        """
+        if self.consecutive_failures - failures_at_start >= LINK_DOWN_FAILURES:
+            logger.debug("Link down: skipping the rest of this read cycle")
+            return True
+        return False
 
     async def set_value(
         self, slug: str, value: Any, password: str | None = None, user: str | None = None

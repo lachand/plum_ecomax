@@ -28,6 +28,7 @@ from .const import (
     DEVICE_INFO_PARAMS,
     DOMAIN,
     MANUAL_MODE_SLUG,
+    MAX_UPDATE_INTERVAL,
     NUMBER_TYPES,
     SCHEDULE_TYPES,
     SELECT_TYPES,
@@ -102,6 +103,9 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
     # True while the boiler is unreachable -- lets the outage be logged once
     # on the way down and once on recovery instead of every cycle.
     _link_down: bool = False
+    # The configured polling interval, remembered while update_interval is
+    # stretched during an outage (see _stretch_interval).
+    _base_interval: timedelta | None = None
 
     def __init__(
         self,
@@ -213,10 +217,12 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
                         read_error or "no valid response",
                     )
                 self._link_down = True
+                self._stretch_interval()
                 raise UpdateFailed("Boiler unreachable") from read_error
         if self._link_down:
             _LOGGER.info("Communication with the boiler restored")
             self._link_down = False
+        self._restore_interval()
 
         # 3. Validate & fall back per-slug
         for slug in to_fetch:
@@ -239,6 +245,23 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
 
         self._update_connection_issue()
         return data
+
+    def _stretch_interval(self) -> None:
+        """Poll less often while the boiler is unreachable (doubling, capped at
+        MAX_UPDATE_INTERVAL): a dead link makes each cycle wait on timeouts, and
+        hammering it every few seconds helps nobody."""
+        if self.update_interval is None:
+            return
+        if self._base_interval is None:
+            self._base_interval = self.update_interval
+        cap = timedelta(seconds=MAX_UPDATE_INTERVAL)
+        self.update_interval = max(self._base_interval, min(self.update_interval * 2, cap))
+
+    def _restore_interval(self) -> None:
+        """Back to the configured polling interval after a successful cycle."""
+        if self._base_interval is not None:
+            self.update_interval = self._base_interval
+            self._base_interval = None
 
     def _update_connection_issue(self) -> None:
         """Raises/clears the "connection lost" repair issue based on

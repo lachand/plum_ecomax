@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -79,6 +80,7 @@ def _make_coordinator(
     if isinstance(coordinator.device.last_write_error, MagicMock):
         coordinator.device.last_write_error = None
     coordinator.hass = MagicMock()
+    coordinator.update_interval = timedelta(seconds=30)  # bare object: no __init__
     coordinator.entry_id = entry_id
     coordinator.available_slugs = available_slugs if available_slugs is not None else []
     coordinator._cache = cache if cache is not None else {}
@@ -472,3 +474,51 @@ class TestLinkDown:
 
         assert data["tempcwu"] == 43
         assert any("restored" in r.message for r in caplog.records)
+
+
+class TestOutageBackoff:
+    """While the boiler is unreachable the polling interval doubles (capped at
+    MAX_UPDATE_INTERVAL) and returns to the configured value on the first
+    successful cycle.
+    """
+
+    @staticmethod
+    def _down():
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(return_value={})
+        return _make_coordinator(device=device, available_slugs=["tempcwu"], cache={"tempcwu": 1})
+
+    async def test_interval_doubles_then_caps(self):
+        coordinator = self._down()
+        seen = []
+        for _ in range(6):
+            with pytest.raises(UpdateFailed):
+                await coordinator._async_update_data()
+            seen.append(coordinator.update_interval.total_seconds())
+        assert seen == [60, 120, 240, 300, 300, 300]
+
+    async def test_interval_returns_to_the_configured_value_on_recovery(self):
+        coordinator = self._down()
+        for _ in range(3):
+            with pytest.raises(UpdateFailed):
+                await coordinator._async_update_data()
+        assert coordinator.update_interval == timedelta(seconds=240)
+
+        coordinator.device.get_values = AsyncMock(return_value={"tempcwu": 2})
+        await coordinator._async_update_data()
+
+        assert coordinator.update_interval == timedelta(seconds=30)
+
+    async def test_a_base_interval_above_the_cap_is_never_lowered(self):
+        coordinator = self._down()
+        coordinator.update_interval = timedelta(seconds=400)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator.update_interval == timedelta(seconds=400)
+
+    async def test_healthy_polling_never_touches_the_interval(self):
+        coordinator = self._down()
+        coordinator.device.get_values = AsyncMock(return_value={"tempcwu": 2})
+        await coordinator._async_update_data()
+        assert coordinator.update_interval == timedelta(seconds=30)
