@@ -32,7 +32,7 @@ def _snapshot_store(hass, entry_id: str) -> Store:
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Sets up the save/restore-defaults buttons."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities(
         [
             PlumSaveDefaultsButton(coordinator, entry),

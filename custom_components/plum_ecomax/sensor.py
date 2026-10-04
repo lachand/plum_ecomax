@@ -54,7 +54,7 @@ async def async_setup_entry(
         entry: The config entry.
         async_add_entities: Callback to add entities.
     """
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     selected_circuits = entry.data.get(CONF_ACTIVE_CIRCUITS, [])
     entities = []
 
@@ -79,7 +79,7 @@ async def async_setup_entry(
         entities.append(PlumEcomaxSensor(coordinator, entry, slug, config, target_circuit_id))
 
     # Link-health diagnostics (not device-map parameters -- read straight
-    # off the driver). See IMPROVEMENT_PLAN.md section C.
+    # off the driver). See IMPROVEMENT_PLAN_ARCHIVE.md section C.
     entities.append(PlumLastCommunicationSensor(coordinator, entry.entry_id))
     entities.append(PlumConsecutiveFailuresSensor(coordinator, entry.entry_id))
     entities.append(PlumSolarDumpRuntimeSensor(coordinator, entry.entry_id))

@@ -7,7 +7,7 @@ registers that don't have a dedicated per-state parameter on the wire:
   whether the physical control panel is currently in manual override mode.
   This is the one state that determines whether writes like the
   hdwpumpforce switch actually have any physical effect
-  (IMPROVEMENT_PLAN.md section H): a switch turned on while the panel isn't
+  (IMPROVEMENT_PLAN_ARCHIVE.md section H): a switch turned on while the panel isn't
   in manual mode is accepted and held by the boiler, but does nothing.
 * Alarm bitmask registers (ALARM_BITMASK_SLUGS in const.py) as
   BinarySensorDeviceClass.PROBLEM -- "some bit is set" rather than decoded
@@ -46,7 +46,7 @@ async def async_setup_entry(
         entry: The configuration entry.
         async_add_entities: Callback to add entities to Home Assistant.
     """
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities = []
 
     if MANUAL_MODE_SLUG in coordinator.device.params_map:

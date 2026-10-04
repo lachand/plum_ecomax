@@ -117,7 +117,7 @@ async def _handle_set_schedule(hass: HomeAssistant, call: ServiceCall) -> None:
         comfort_slots |= time_range_to_slots(block["from"], block["to"])
     am, pm = slots_to_am_pm(comfort_slots)
 
-    coordinators = list(hass.data.get(DOMAIN, {}).values())
+    coordinators = [e.runtime_data for e in hass.config_entries.async_loaded_entries(DOMAIN)]
     if not coordinators:
         _LOGGER.warning("set_schedule called but no Plum EcoMAX config entry is loaded")
         return
@@ -150,5 +150,5 @@ async def async_register_services(hass: HomeAssistant) -> None:
 
 async def async_unregister_services(hass: HomeAssistant) -> None:
     """Drop the service when the last config entry unloads."""
-    if not hass.data.get(DOMAIN):
+    if not hass.config_entries.async_loaded_entries(DOMAIN):
         hass.services.async_remove(DOMAIN, SERVICE_SET_SCHEDULE)

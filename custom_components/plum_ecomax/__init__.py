@@ -24,6 +24,9 @@ from .solar_dump import async_stop_for_entry as async_stop_solar_dump
 from .solar_dump import async_unregister_services as async_unregister_solar_dump_service
 
 _LOGGER = logging.getLogger(__name__)
+
+type PlumConfigEntry = ConfigEntry[PlumDataUpdateCoordinator]
+
 PLATFORMS = [
     "climate",
     "sensor",
@@ -55,7 +58,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry):
     """Set up Plum EcoMAX from a config entry.
 
     This function initializes the connection to the boiler, loads the
@@ -88,8 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_register_schedule_service(hass)
@@ -97,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry):
     """Unload a config entry.
 
     Args:
@@ -113,7 +115,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         # below is closed -- otherwise the boiler could be left in manual mode.
         await async_stop_solar_dump_auto(hass, entry.entry_id)
         await async_stop_solar_dump(hass, entry.entry_id)
-        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator = entry.runtime_data
         # PlumDevice now keeps its TCP connection open across transactions
         # (persistent connection) instead of closing it after every one --
         # tear it down explicitly here so a reload/removal doesn't leak an

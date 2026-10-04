@@ -9,13 +9,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.plum_ecomax.const import CONF_ACTIVE_CIRCUITS, DOMAIN
+from custom_components.plum_ecomax.const import CONF_ACTIVE_CIRCUITS
 from custom_components.plum_ecomax.schedule import (
     _handle_set_schedule,
     am_pm_to_slots,
     slots_to_am_pm,
     time_range_to_slots,
 )
+from tests.conftest import set_loaded_entries
 
 
 class TestEncoding:
@@ -48,7 +49,7 @@ class TestSetScheduleService:
         coordinator.config_entry.data = {CONF_ACTIVE_CIRCUITS: list(active)}
         coordinator.async_set_value = AsyncMock(return_value=True)
         hass = MagicMock()
-        hass.data = {DOMAIN: {"e1": coordinator}}
+        set_loaded_entries(hass, {"e1": coordinator})
         return hass, coordinator
 
     @pytest.mark.asyncio

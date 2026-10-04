@@ -21,3 +21,19 @@ def hass():
     hass = MagicMock()
     hass.data = {}
     return hass
+
+
+def set_loaded_entries(hass, coordinators: dict) -> None:
+    """Expose {entry_id: coordinator} the way services see them:
+    hass.config_entries.async_loaded_entries(DOMAIN) -> entries carrying
+    their coordinator as runtime_data.
+    """
+    from unittest.mock import MagicMock
+
+    entries = []
+    for entry_id, coordinator in coordinators.items():
+        entry = MagicMock()
+        entry.entry_id = entry_id
+        entry.runtime_data = coordinator
+        entries.append(entry)
+    hass.config_entries.async_loaded_entries.return_value = entries

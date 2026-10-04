@@ -17,7 +17,6 @@ import pytest
 
 from custom_components.plum_ecomax import solar_dump
 from custom_components.plum_ecomax.const import (
-    DOMAIN,
     MANUAL_MODE_BIT,
     OPERATING_MODE_AUTO,
     OPERATING_MODE_MANUAL,
@@ -28,6 +27,7 @@ from custom_components.plum_ecomax.solar_dump import (
     async_start_hold,
     async_stop_for_entry,
 )
+from tests.conftest import set_loaded_entries
 
 # Captured before any test patches asyncio.sleep -- test helpers use this to
 # yield to the loop regardless of what the code-under-test's sleep is mocked to.
@@ -89,7 +89,7 @@ def _make_hass(coordinators=None):
     hass = MagicMock()
     hass.async_create_task = lambda coro, name=None: asyncio.ensure_future(coro)
     if coordinators is not None:
-        hass.data = {DOMAIN: coordinators}
+        set_loaded_entries(hass, coordinators)
     return hass
 
 
@@ -142,7 +142,7 @@ async def _wait_until(predicate, turns=500):
 @pytest.mark.asyncio
 async def test_no_coordinators_is_a_noop(caplog):
     hass = _make_hass()
-    hass.data = {DOMAIN: {}}
+    set_loaded_entries(hass, {})
     await _handle_solar_to_buffer(hass, _make_call(30))
     assert not _RUNNING
 
@@ -151,7 +151,7 @@ async def test_no_coordinators_is_a_noop(caplog):
 async def test_happy_path_writes_then_restores():
     dev = FakeDevice()
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     await _run_service(hass, _make_call(30))
 
@@ -168,7 +168,7 @@ async def test_happy_path_writes_then_restores():
 async def test_duration_is_capped_at_120_minutes():
     dev = FakeDevice()
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     seen: list[float] = []
 
@@ -189,7 +189,7 @@ async def test_already_in_manual_forces_pump_but_leaves_mode_alone():
     # operating mode -- neither on the way in nor on the way out.
     dev = FakeDevice(start_mode=OPERATING_MODE_MANUAL)
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     await _run_service(hass, _make_call(30))
 
@@ -201,7 +201,7 @@ async def test_aborts_if_operating_mode_unreadable():
     dev = FakeDevice()
     dev.get_value = AsyncMock(return_value=None)
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     await _run_service(hass, _make_call(30))
 
@@ -212,7 +212,7 @@ async def test_aborts_if_operating_mode_unreadable():
 async def test_restores_even_if_manual_mode_not_confirmed_by_telemetry():
     dev = FakeDevice(manual_bit_follows=False)  # bit 64 never appears
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     await _run_service(hass, _make_call(30))
 
@@ -226,7 +226,7 @@ async def test_restores_even_if_manual_mode_not_confirmed_by_telemetry():
 async def test_stop_for_entry_cancels_and_restores():
     dev = FakeDevice()
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     # A hold that would otherwise block forever.
     async def _forever(seconds):
@@ -246,7 +246,7 @@ async def test_stop_for_entry_cancels_and_restores():
 async def test_second_call_restarts_the_run():
     dev = FakeDevice()
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     async def _forever(seconds):
         if seconds >= 60:
@@ -283,7 +283,7 @@ async def test_restore_failure_raises_issue(_mock_issues):
 
     dev.set_value = AsyncMock(side_effect=_set_fail_on_restore)
     hass = _make_hass()
-    hass.data = {DOMAIN: {"e1": _coord(dev)}}
+    set_loaded_entries(hass, {"e1": _coord(dev)})
 
     await _run_service(hass, _make_call(5))
 
@@ -300,7 +300,7 @@ class TestSwitchHold:
         dev = FakeDevice()
         hass = _make_hass()
         coord = _coord(dev)
-        hass.data = {DOMAIN: {"e1": coord}}
+        set_loaded_entries(hass, {"e1": coord})
 
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
@@ -316,7 +316,7 @@ class TestSwitchHold:
         dev = FakeDevice(start_mode=OPERATING_MODE_MANUAL)
         hass = _make_hass()
         coord = _coord(dev)
-        hass.data = {DOMAIN: {"e1": coord}}
+        set_loaded_entries(hass, {"e1": coord})
 
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
@@ -329,7 +329,7 @@ class TestSwitchHold:
         dev = FakeDevice()
         hass = _make_hass()
         coord = _coord(dev)
-        hass.data = {DOMAIN: {"e1": coord}}
+        set_loaded_entries(hass, {"e1": coord})
 
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)

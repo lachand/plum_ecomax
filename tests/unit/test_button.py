@@ -57,7 +57,7 @@ async def test_async_setup_entry_adds_both_buttons():
     coordinator = _make_coordinator(PARAMS_MAP, DATA)
     entry = _make_entry(["2"])
     hass = MagicMock()
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
 
     added = []
     await async_setup_entry(hass, entry, lambda entities: added.extend(entities))

@@ -10,7 +10,6 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
 
-from custom_components.plum_ecomax.const import DOMAIN
 from custom_components.plum_ecomax.diagnostics import async_get_config_entry_diagnostics
 
 
@@ -39,7 +38,7 @@ def _setup():
     entry.entry_id = "e1"
     entry.data = {CONF_IP_ADDRESS: "192.168.1.38", CONF_PASSWORD: "0000", "port": 8899}
     entry.options = {}
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
     return hass, entry
 
 

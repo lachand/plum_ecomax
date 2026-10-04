@@ -35,7 +35,7 @@ async def async_setup_entry(
         entry: The configuration entry.
         async_add_entities: Callback to add entities to Home Assistant.
     """
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities = []
 
     # Config format: "slug": ("Name", Map_To_HA, Map_To_Plum)

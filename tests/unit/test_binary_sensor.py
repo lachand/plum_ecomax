@@ -4,7 +4,7 @@ Covers:
 * async_setup_entry filtering (manual-mode + alarm entities only created
   for slugs present in the device map).
 * PlumManualModeBinarySensor -- bitmask extraction of MANUAL_MODE_BIT from
-  heatsourcemainpumpstate (see IMPROVEMENT_PLAN.md section H for how this
+  heatsourcemainpumpstate (see IMPROVEMENT_PLAN_ARCHIVE.md section H for how this
   bit was empirically confirmed against the real boiler).
 * PlumAlarmBinarySensor -- coarse "some bit is set" reading of the alarm
   registers, plus the repair-issue mirroring (create while on, delete while
@@ -44,7 +44,7 @@ class TestAsyncSetupEntry:
         hass = MagicMock()
         entry = MagicMock()
         entry.entry_id = "entry123"
-        hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+        entry.runtime_data = coordinator
 
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
@@ -60,7 +60,7 @@ class TestAsyncSetupEntry:
         hass = MagicMock()
         entry = MagicMock()
         entry.entry_id = "entry123"
-        hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+        entry.runtime_data = coordinator
 
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
@@ -74,7 +74,7 @@ class TestAsyncSetupEntry:
         hass = MagicMock()
         entry = MagicMock()
         entry.entry_id = "entry123"
-        hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+        entry.runtime_data = coordinator
 
         added = []
         await async_setup_entry(hass, entry, lambda entities: added.extend(entities))

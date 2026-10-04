@@ -30,7 +30,7 @@ async def test_async_setup_entry_only_creates_entities_present_in_device_map():
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "entry123"
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
 
     added = []
     await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
@@ -45,7 +45,7 @@ async def test_async_setup_entry_skips_slugs_not_in_device_map():
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "entry123"
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
 
     added = []
     await async_setup_entry(hass, entry, lambda entities: added.extend(entities))

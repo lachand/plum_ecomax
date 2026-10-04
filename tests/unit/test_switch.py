@@ -5,7 +5,7 @@ in the device map), on/off state derivation from arbitrary on_value/
 off_value pairs (not just 1/0 -- e.g. hdwpumpforce uses 512/0), the write
 path, and device routing (HDW_SWITCHES -> DHW device, everything else ->
 boiler device), plus unique_id scoping by entry_id -- the pattern that was
-missing here before device.py existed (IMPROVEMENT_PLAN.md section C).
+missing here before device.py existed (IMPROVEMENT_PLAN_ARCHIVE.md section C).
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ async def test_async_setup_entry_only_creates_entities_present_in_device_map():
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "entry123"
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
 
     added = []
     await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
@@ -55,7 +55,7 @@ async def test_async_setup_entry_skips_slugs_not_in_device_map():
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "entry123"
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
 
     added = []
     await async_setup_entry(hass, entry, lambda entities: added.extend(entities))
@@ -137,7 +137,7 @@ class TestWritePath:
 class TestManualModeBackedSwitch:
     """The hdwpumpforce switch doesn't just write the parameter -- it routes
     through solar_dump so it enters/leaves manual mode (the boiler ignores
-    the force otherwise). See IMPROVEMENT_PLAN.md section N."""
+    the force otherwise). See IMPROVEMENT_PLAN_ARCHIVE.md section N."""
 
     @pytest.mark.asyncio
     async def test_turn_on_calls_start_hold(self):
@@ -187,7 +187,7 @@ class TestDeviceRouting:
 
 class TestOperatingModeSwitch:
     """pid 161 exposed as a switch: on=2 (manual), off=1 (automatic),
-    Configuration category (IMPROVEMENT_PLAN.md section N)."""
+    Configuration category (IMPROVEMENT_PLAN_ARCHIVE.md section N)."""
 
     def _switch(self, data, entry="entry123"):
         from custom_components.plum_ecomax.const import OPERATING_MODE_AUTO, OPERATING_MODE_MANUAL

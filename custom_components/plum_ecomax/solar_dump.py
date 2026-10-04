@@ -1,7 +1,7 @@
 """Manual-mode-backed DHW-pump forcing: the plum_ecomax.solar_to_buffer
 service and the machinery the "DHW pump -> Solar buffer" switch reuses.
 
-Bus capture (IMPROVEMENT_PLAN.md section N) showed the ecoSTER "manual
+Bus capture (IMPROVEMENT_PLAN_ARCHIVE.md section N) showed the ecoSTER "manual
 control" service screen does just two writes to force the DHW transfer
 pump -- and the boiler ignores the force unless the first one is in place:
 
@@ -332,7 +332,9 @@ async def _handle_solar_to_buffer(hass: HomeAssistant, call: ServiceCall) -> Non
     hold_s = hold_min * 60
     start_override = call.data.get("start_temp")
     stop_override = call.data.get("stop_temp")
-    coordinators = dict(hass.data.get(DOMAIN, {}))
+    coordinators = {
+        e.entry_id: e.runtime_data for e in hass.config_entries.async_loaded_entries(DOMAIN)
+    }
     if not coordinators:
         _LOGGER.warning("solar_to_buffer called but no Plum EcoMAX config entry is loaded")
         return
@@ -368,7 +370,7 @@ async def _async_stop_all(hass: HomeAssistant) -> None:
 
 # --------------------------------------------------------------------------
 # Automatic mode -- a differential-temperature (dT) controller that runs the
-# transfer in bursts. See IMPROVEMENT_PLAN.md section O / the plan file.
+# transfer in bursts. See IMPROVEMENT_PLAN_ARCHIVE.md section O / the plan file.
 # --------------------------------------------------------------------------
 
 # entry_id -> {unsub, running, last_start, last_stop, runtime_today, day}
@@ -581,7 +583,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
 async def async_unregister_services(hass: HomeAssistant) -> None:
     """Drop the service when the last config entry unloads."""
     global _STOP_UNSUB
-    if not hass.data.get(DOMAIN):
+    if not hass.config_entries.async_loaded_entries(DOMAIN):
         hass.services.async_remove(DOMAIN, SERVICE_SOLAR_TO_BUFFER)
         if _STOP_UNSUB is not None:
             _STOP_UNSUB()

@@ -43,7 +43,7 @@ async def async_setup_entry(
         entry: The config entry.
         async_add_entities: Callback to add entities to Home Assistant.
     """
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities = []
 
     _LOGGER.info("Starting water heater setup...")

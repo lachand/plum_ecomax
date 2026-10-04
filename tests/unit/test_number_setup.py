@@ -37,7 +37,7 @@ def _make_hass_and_entry(params_map: dict, active_circuits: list[str]):
     entry = MagicMock()
     entry.entry_id = "entry123"
     entry.data = {CONF_ACTIVE_CIRCUITS: active_circuits}
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
     return hass, entry
 
 
