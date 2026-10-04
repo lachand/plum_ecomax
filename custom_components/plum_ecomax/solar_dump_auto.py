@@ -96,7 +96,7 @@ def auto_seed_runtime(coordinator: PlumDataUpdateCoordinator, minutes: float) ->
     st["runtime_today"] = max(st["runtime_today"], float(minutes))
 
 
-def _fresh_auto_state() -> dict:
+def _fresh_auto_state() -> dict[str, Any]:
     return {
         "unsub": None,
         "running": False,
@@ -241,7 +241,7 @@ async def _auto_tick(
 async def _auto_stop(
     hass: HomeAssistant,
     coordinator: PlumDataUpdateCoordinator,
-    st: dict,
+    st: dict[str, Any],
     entry_id: str,
     reason: str,
 ) -> None:

@@ -32,12 +32,8 @@ files = ["custom_components"]
 # homeassistant ships its own types; the few third-party stubs we don't have
 # (voluptuous extras) shouldn't fail the run.
 ignore_missing_imports = true
-check_untyped_defs = true
-disallow_untyped_defs = true
-warn_return_any = true
-warn_redundant_casts = true
+strict = true
 warn_unreachable = true
-warn_unused_ignores = true
 exclude = ["tools/"]
 
 [tool.pytest.ini_options]

@@ -87,13 +87,13 @@ class SolarDumpState:
     """
 
     # The running lifecycle task, if any.
-    task: asyncio.Task | None = None
+    task: asyncio.Task[None] | None = None
     # Who started the current session: "manual" | "service" | "auto". The
     # auto controller only ever stops a session it owns.
     owner: str | None = None
     # Auto-controller bookkeeping ({unsub, running, last_start, last_stop,
     # runtime_today, day}), created on first use -- see _fresh_auto_state().
-    auto: dict | None = None
+    auto: dict[str, Any] | None = None
     # True once the auto tick's unsubscribe has been handed to the entry's
     # async_on_unload, so toggling the switch doesn't register it again.
     unload_hooked: bool = field(default=False, repr=False)

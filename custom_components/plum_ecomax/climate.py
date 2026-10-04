@@ -9,11 +9,8 @@ import logging
 import math
 from typing import Any
 
-from homeassistant.components.climate import (
-    ClimateEntity,
-    ClimateEntityFeature,
-    HVACMode,
-)
+from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate.const import ClimateEntityFeature, HVACMode
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -26,6 +23,10 @@ from .coordinator import PlumDataUpdateCoordinator
 from .device import circuit_device_info
 
 _LOGGER = logging.getLogger(__name__)
+
+# Commands go to a single boiler over one connection: serialize them (the driver
+# already orders I/O; this stops Home Assistant from piling up concurrent calls).
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(

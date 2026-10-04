@@ -7,6 +7,8 @@ or other adjustable settings defined in `NUMBER_TYPES`.
 
 import logging
 import re
+from collections.abc import Mapping
+from typing import Any
 
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
@@ -27,6 +29,10 @@ _SOLAR_DUMP_UNITS = {
 }
 
 _LOGGER = logging.getLogger(__name__)
+
+# Commands go to a single boiler over one connection: serialize them (the driver
+# already orders I/O; this stops Home Assistant from piling up concurrent calls).
+PARALLEL_UPDATES = 1
 
 _CIRCUIT_SLUG_RE = re.compile(r"^circuit(\d+)")
 # Mixer N is physically tied to circuit N on this boiler, so mixer entities
@@ -52,7 +58,7 @@ def is_config_category_slug(slug: str) -> bool:
     return bool(_CIRCUIT_SLUG_RE.match(slug)) or slug.startswith(_ADVANCED_NUMBER_PREFIXES)
 
 
-def active_number_slugs(params_map: dict, selected_circuits: list) -> list:
+def active_number_slugs(params_map: Mapping[str, Any], selected_circuits: list[str]) -> list[str]:
     """NUMBER_TYPES slugs that would actually get an entity: present on
     this boiler, and (for circuit/mixer-numbered ones) belonging to an
     active circuit. Shared with button.py so the save/restore buttons only

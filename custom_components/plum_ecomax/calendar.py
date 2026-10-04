@@ -4,7 +4,7 @@ from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -16,6 +16,9 @@ from .device import circuit_device_info, hdw_device_info
 from .schedule import am_pm_to_slots
 
 _LOGGER = logging.getLogger(__name__)
+
+# Entities only read the coordinator's data: no per-entity update to throttle.
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(

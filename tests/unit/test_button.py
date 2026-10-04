@@ -88,7 +88,7 @@ async def test_save_button_stores_only_eligible_values():
 
     fake_store = MagicMock()
     fake_store.async_save = AsyncMock()
-    with patch("custom_components.plum_ecomax.button.Store", return_value=fake_store):
+    with patch("custom_components.plum_ecomax.snapshot.Store", return_value=fake_store):
         await button.async_press()
 
     fake_store.async_save.assert_awaited_once()
@@ -110,7 +110,7 @@ async def test_restore_button_writes_back_saved_values():
     snapshot = {"circuit2curvefloor": 1.0, "circuit2basetemp": 20, "buforlongloadtime": 45}
     fake_store = MagicMock()
     fake_store.async_load = AsyncMock(return_value=snapshot)
-    with patch("custom_components.plum_ecomax.button.Store", return_value=fake_store):
+    with patch("custom_components.plum_ecomax.snapshot.Store", return_value=fake_store):
         await button.async_press()
 
     assert coordinator.async_set_value.await_count == 3
@@ -133,7 +133,7 @@ async def test_restore_button_skips_slugs_no_longer_eligible():
     }
     fake_store = MagicMock()
     fake_store.async_load = AsyncMock(return_value=snapshot)
-    with patch("custom_components.plum_ecomax.button.Store", return_value=fake_store):
+    with patch("custom_components.plum_ecomax.snapshot.Store", return_value=fake_store):
         await button.async_press()
 
     coordinator.async_set_value.assert_awaited_once_with("circuit2curvefloor", 1.0)
@@ -148,7 +148,7 @@ async def test_restore_button_does_nothing_when_no_snapshot_saved():
 
     fake_store = MagicMock()
     fake_store.async_load = AsyncMock(return_value=None)
-    with patch("custom_components.plum_ecomax.button.Store", return_value=fake_store):
+    with patch("custom_components.plum_ecomax.snapshot.Store", return_value=fake_store):
         await button.async_press()
 
     coordinator.async_set_value.assert_not_awaited()

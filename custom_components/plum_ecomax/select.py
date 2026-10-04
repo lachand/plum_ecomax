@@ -11,7 +11,7 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -20,6 +20,10 @@ from .coordinator import PlumDataUpdateCoordinator
 from .device import hdw_device_info
 
 _LOGGER = logging.getLogger(__name__)
+
+# Commands go to a single boiler over one connection: serialize them (the driver
+# already orders I/O; this stops Home Assistant from piling up concurrent calls).
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(

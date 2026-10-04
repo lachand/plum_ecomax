@@ -38,6 +38,9 @@ from .solar_dump_auto import auto_runtime_minutes, auto_seed_runtime
 
 _LOGGER = logging.getLogger(__name__)
 
+# Entities only read the coordinator's data: no per-entity update to throttle.
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback

@@ -55,7 +55,7 @@ class ParamDef(TypedDict):
     min: NotRequired[int | float]
     max: NotRequired[int | float]
     max_delta: NotRequired[int | float]
-    enum: NotRequired[list]
+    enum: NotRequired[list[Any]]
 
 
 class Frame(NamedTuple):

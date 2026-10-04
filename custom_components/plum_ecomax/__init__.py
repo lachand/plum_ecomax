@@ -21,6 +21,7 @@ from .device import async_remove_stale_devices, is_stale_device, normalise_seria
 from .plum_device import DEVICE_MAP_PATH, PlumDevice
 from .schedule import async_register_services as async_register_schedule_service
 from .schedule import async_unregister_services as async_unregister_schedule_service
+from .snapshot import async_remove_snapshot
 from .solar_dump import async_register_services as async_register_solar_dump_service
 from .solar_dump import async_register_stop_listener as async_register_solar_dump_stop
 from .solar_dump import async_stop_for_entry as async_stop_solar_dump
@@ -134,6 +135,11 @@ async def async_remove_config_entry_device(
     longer active); live devices, and always the main boiler, stay protected.
     """
     return is_stale_device(hass, entry, device_entry)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> None:
+    """Clean up what the entry left on disk: its saved reference-values snapshot."""
+    await async_remove_snapshot(hass, entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool:

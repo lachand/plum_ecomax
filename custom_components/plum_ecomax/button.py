@@ -14,7 +14,6 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PlumConfigEntry
@@ -22,17 +21,13 @@ from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info
 from .number import active_number_slugs, is_config_category_slug
+from .snapshot import snapshot_store
 
 _LOGGER = logging.getLogger(__name__)
 
-STORAGE_VERSION = 1
-
-
-def _snapshot_store(hass: HomeAssistant, entry_id: str) -> Store:
-    """The on-disk store holding the saved reference values, one per
-    config entry (so two boilers never share a snapshot).
-    """
-    return Store(hass, STORAGE_VERSION, f"{DOMAIN}_{entry_id}_number_defaults")
+# Commands go to a single boiler over one connection: serialize them (the driver
+# already orders I/O; this stops Home Assistant from piling up concurrent calls).
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -63,7 +58,7 @@ class _PlumDefaultsButtonBase(CoordinatorEntity[PlumDataUpdateCoordinator], Butt
     def device_info(self) -> DeviceInfo:
         return boiler_device_info(self._entry_id, self.coordinator.data.get("uid"))
 
-    def _eligible_slugs(self) -> list:
+    def _eligible_slugs(self) -> list[str]:
         """CONFIG-category number slugs currently exposed as entities --
         present on this boiler, and belonging to an active circuit.
         """
@@ -93,7 +88,7 @@ class PlumSaveDefaultsButton(_PlumDefaultsButtonBase):
             for slug in self._eligible_slugs()
             if self.coordinator.data.get(slug) is not None
         }
-        await _snapshot_store(self.hass, self._entry_id).async_save(snapshot)
+        await snapshot_store(self.hass, self._entry_id).async_save(snapshot)
         _LOGGER.info(
             "Saved %d parameter(s) as reference values: %s", len(snapshot), sorted(snapshot)
         )
@@ -111,7 +106,7 @@ class PlumRestoreDefaultsButton(_PlumDefaultsButtonBase):
         self._attr_unique_id = f"{DOMAIN}_{self._entry_id}_restore_number_defaults"
 
     async def async_press(self) -> None:
-        snapshot = await _snapshot_store(self.hass, self._entry_id).async_load()
+        snapshot = await snapshot_store(self.hass, self._entry_id).async_load()
         if not snapshot:
             _LOGGER.warning("No reference values have been saved yet -- nothing to restore")
             return

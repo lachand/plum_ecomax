@@ -24,7 +24,8 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -34,6 +35,9 @@ from .device import boiler_device_info
 from .issues import clear_issue, raise_issue
 
 _LOGGER = logging.getLogger(__name__)
+
+# Entities only read the coordinator's data: no per-entity update to throttle.
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(

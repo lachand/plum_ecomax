@@ -170,7 +170,7 @@ class PlumDevice:
         return self._data_cache.get(slug)
 
     async def get_values(
-        self, slugs: list, retries: int = 2, batch_size: int = DEFAULT_BATCH_SIZE
+        self, slugs: list[str], retries: int = 2, batch_size: int = DEFAULT_BATCH_SIZE
     ) -> dict[str, Any]:
         """Asynchronously fetches several parameter values in as few frames as possible.
 
@@ -220,10 +220,10 @@ class PlumDevice:
                     for pid, val in values.items():
                         if val is None:
                             continue
-                        slug = slug_by_pid.get(pid)
-                        if slug:
-                            results[slug] = val
-                            self._data_cache[slug] = val
+                        found = slug_by_pid.get(pid)
+                        if found:
+                            results[found] = val
+                            self._data_cache[found] = val
                     if values:
                         # A valid but short answer (the module stops at a pid it
                         # doesn't know) won't change on a retry: callers re-probe

@@ -131,3 +131,20 @@ async def test_calendar_exposes_the_comfort_events(hass):
 
     assert "calendar.circuit_2_schedule" in result
     assert isinstance(result["calendar.circuit_2_schedule"]["events"], list)
+
+
+async def test_removing_the_entry_deletes_its_saved_reference_values(hass, hass_storage):
+    entry, _ = await _loaded(hass)
+    await _call(
+        hass,
+        "button",
+        "press",
+        {"entity_id": "button.plum_ecomax_boiler_save_current_values_as_reference"},
+    )
+    key = f"{DOMAIN}_{entry.entry_id}_number_defaults"
+    assert key in hass_storage  # the snapshot was written
+
+    assert await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert key not in hass_storage
