@@ -116,7 +116,7 @@ Developed and tested against a **Plum ecoMAX 360i** through its **ecoNET** netwo
 | Calendar | Weekly comfort/eco program per circuit and for DHW |
 | Button | Save / restore a reference snapshot of the curve and DHW configuration |
 
-Two actions are registered: **`plum_ecomax.set_schedule`** (rewrite a weekly program) and **`plum_ecomax.solar_to_buffer`** (timed DHW → buffer transfer). Both are described in `services.yaml` and shown in Developer tools → Actions.
+Two actions are registered: **`plum_ecomax.set_schedule`** (rewrite a weekly program) and **`plum_ecomax.solar_to_buffer`** (timed DHW → buffer transfer). Both are described in `services.yaml` and shown in Developer tools → Actions. They are registered once when the integration is set up and fail with a clear message when nothing can be done (no boiler loaded, a circuit that is not active, a schedule the boiler does not expose). Every command that changes a boiler setting waits for the boiler's confirmation: if it never confirms, the previous value is restored and the action reports *"The boiler did not confirm writing …"* (or *"rejected"* with the boiler's code).
 
 ## Data updates
 
@@ -131,7 +131,7 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 * **Cannot connect / entry keeps retrying:** check the IP address and port, and that no other client is using the module. The ecoNET module answers the requests of **one client at a time** (with two connections open, only the most recent one was answered in tests), so the ecoNET app, another Home Assistant or a script on the same module will starve the integration.
 * **Occasional slow or missing readings:** the module ignores requests that arrive while it is emitting its bursts of unsolicited frames (a sizeable share of requests during measurements). The integration skips those frames, keeps the connection and retries; the *consecutive failures* sensor shows how often it happens.
 * **Everything is *unavailable*:** the boiler is unreachable. A "connection lost" repair issue appears in Settings → Repairs and clears by itself when communication returns.
-* **A write has no effect / "write rejected" repair issue:** the boiler answered an error code (0x7D means authentication). Check the user name and password with **Reconfigure**. Reads never send the password, so a wrong one only shows on the first write.
+* **An action fails with "did not confirm" / "rejected":** the boiler did not apply the write. "Rejected" comes with the boiler's error code (0x7D means authentication, and a "write rejected" repair issue is raised): check the user name and password with **Reconfigure**. Reads never send the password, so a wrong one only shows on the first write. "Did not confirm" usually means the module ignored the request (see the previous point): try again.
 * **Manual mode stuck:** if the integration cannot return the boiler to automatic after a solar-dump session, a `manual_mode_stuck` repair issue is raised; switch the controller back to automatic on its panel.
 * **More detail:** download the redacted diagnostics from the device page, and enable debug logging with `logger: logs: custom_components.plum_ecomax: debug` in `configuration.yaml`.
 
@@ -141,6 +141,7 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 * The active circuits are chosen in the configuration; the integration does not add circuits by itself.
 * The password is only used, and only checked by the boiler, when something is written.
 * While a solar-dump session runs, the boiler is in manual mode and its automatic regulation is off. The return to automatic is guaranteed on the timer, on unload and on Home Assistant shutdown, but a boiler restarted or disconnected in the middle of a session is not under the integration's control.
+* The raw diagnostic registers (alarm-detection settings, work states, circulation state) are created **disabled** on new installs; enable them from the entity's settings when troubleshooting. Existing installs keep their entities as they are.
 * Tested on one boiler model (see *Supported devices*).
 
 ## Development
