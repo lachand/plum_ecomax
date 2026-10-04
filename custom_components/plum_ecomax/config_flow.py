@@ -14,7 +14,6 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -226,52 +225,5 @@ class PlumConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=_build_data_schema(user_input or entry.data),
-            errors=errors,
-        )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> "PlumOptionsFlow":
-        """Returns the options flow used to reconfigure an existing entry."""
-        return PlumOptionsFlow()
-
-
-class PlumOptionsFlow(config_entries.OptionsFlow):
-    """Lets an existing entry's IP/port/credentials/circuits be edited
-    without deleting and re-adding the whole integration.
-
-    Deliberately has no __init__: on current Home Assistant, OptionsFlow.
-    config_entry is a read-only property computed from self.hass/self.handler
-    (not available until after the flow is initialized), not a plain
-    attribute -- assigning to it in __init__, as the older
-    `PlumOptionsFlow(config_entry)` pattern did, raises AttributeError
-    ("can't set attribute"), which surfaced as a 500 error opening the
-    options flow. self.config_entry works fine once referenced inside
-    async_step_init below.
-    """
-
-    async def async_step_init(self, user_input=None):
-        """Show and validate the reconfiguration form.
-
-        On success, updates the config entry's data in place and reloads
-        it so the new connection details take effect immediately.
-        """
-        errors = {}
-        if user_input is not None:
-            error = await _validate_connection(self.hass, user_input)
-            if error:
-                errors["base"] = error
-            else:
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry,
-                    data=user_input,
-                    title=f"Boiler ({user_input[CONF_IP_ADDRESS]})",
-                )
-                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-                return self.async_create_entry(title="", data={})
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=_build_data_schema(user_input or self.config_entry.data),
             errors=errors,
         )

@@ -18,7 +18,6 @@ from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_
 from custom_components.plum_ecomax import config_flow as config_flow_module
 from custom_components.plum_ecomax.config_flow import (
     PlumConfigFlow,
-    PlumOptionsFlow,
     _build_data_schema,
     _validate_connection,
 )
@@ -204,40 +203,6 @@ class TestBuildDataSchema:
                     CONF_UPDATE_INTERVAL: MAX_UPDATE_INTERVAL + 1,
                 }
             )
-
-
-class TestOptionsFlowConstruction:
-    """Regression for a real bug reported by the user: opening the options
-    flow returned "500 Internal Server Error" in production. Cause: on
-    current Home Assistant, OptionsFlow.config_entry is a read-only
-    property (computed from self.hass/self.handler, unavailable until
-    after init) -- PlumOptionsFlow.__init__ used to do `self.config_entry
-    = config_entry`, which raises AttributeError ("can't set attribute")
-    the moment the flow manager constructs the flow, before any HTTP
-    response can be built. Confirmed against the real installed
-    homeassistant.config_entries.OptionsFlow (not a mock), which is the
-    only way to catch this class of bug -- it wouldn't show up against a
-    hand-rolled stub.
-    """
-
-    def test_async_get_options_flow_does_not_raise(self):
-        mock_entry = MagicMock()
-        # This call alone used to raise AttributeError under the old
-        # PlumOptionsFlow(config_entry) pattern.
-        flow = PlumConfigFlow.async_get_options_flow(mock_entry)
-        assert isinstance(flow, PlumOptionsFlow)
-
-    def test_config_entry_resolves_after_framework_style_init(self):
-        # Mimics how FlowManager actually wires up a flow: construct with
-        # no arguments, then set hass/handler afterward.
-        flow = PlumOptionsFlow()
-        mock_entry = MagicMock()
-        mock_hass = MagicMock()
-        mock_hass.config_entries.async_get_known_entry.return_value = mock_entry
-        flow.hass = mock_hass
-        flow.handler = "some-entry-id"
-
-        assert flow.config_entry is mock_entry
 
 
 class TestSerialProbe:

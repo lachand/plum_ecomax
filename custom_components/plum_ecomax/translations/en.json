@@ -37,26 +37,6 @@
             "unique_id_mismatch": "The boiler at this address is not the one this entry was set up for."
         }
     },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Plum EcoMAX Configuration",
-                "description": "Update the EcoNet connection details.",
-                "data": {
-                    "ip_address": "IP Address",
-                    "port": "Port",
-                    "username": "Username",
-                    "password": "Password",
-                    "active_circuits": "Active Heating Circuits",
-                    "update_interval": "Polling interval (seconds)"
-                }
-            }
-        },
-        "error": {
-            "cannot_connect": "Failed to connect to the boiler",
-            "cannot_load_map": "Failed to load the parameter map"
-        }
-    },
     "selector": {
         "circuits_selector": {
             "options": {

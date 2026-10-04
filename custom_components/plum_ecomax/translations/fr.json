@@ -37,26 +37,6 @@
             "unique_id_mismatch": "La chaudière à cette adresse n'est pas celle pour laquelle cette entrée a été configurée."
         }
     },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Configuration Plum EcoMAX",
-                "description": "Modifiez les informations de connexion au module EcoNet.",
-                "data": {
-                    "ip_address": "Adresse IP",
-                    "port": "Port",
-                    "username": "Nom d'utilisateur",
-                    "password": "Mot de passe",
-                    "active_circuits": "Circuits de chauffage actifs",
-                    "update_interval": "Intervalle de sondage (secondes)"
-                }
-            }
-        },
-        "error": {
-            "cannot_connect": "Connexion à la chaudière impossible",
-            "cannot_load_map": "Échec du chargement de la table des paramètres"
-        }
-    },
     "selector": {
         "circuits_selector": {
             "options": {
