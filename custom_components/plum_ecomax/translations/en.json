@@ -155,25 +155,25 @@
                 "name": "Valve Opening"
             },
             "circuit1name": {
-                "name": "Circuit 1 Name"
+                "name": "Name"
             },
             "circuit2name": {
-                "name": "Circuit 2 Name"
+                "name": "Name"
             },
             "circuit3name": {
-                "name": "Circuit 3 Name"
+                "name": "Name"
             },
             "circuit4name": {
-                "name": "Circuit 4 Name"
+                "name": "Name"
             },
             "circuit5name": {
-                "name": "Circuit 5 Name"
+                "name": "Name"
             },
             "circuit6name": {
-                "name": "Circuit 6 Name"
+                "name": "Name"
             },
             "circuit7name": {
-                "name": "Circuit 7 Name"
+                "name": "Name"
             },
             "detectalarmsettings": {
                 "name": "Alarm Detection Settings (raw)"
@@ -225,13 +225,13 @@
         },
         "number": {
             "hdwtsetpoint": {
-                "name": "DHW Setpoint"
+                "name": "Setpoint"
             },
             "hdwminsettemp": {
-                "name": "DHW Min Temp"
+                "name": "Min Temp"
             },
             "hdwmaxsettemp": {
-                "name": "DHW Max Temp"
+                "name": "Max Temp"
             },
             "buforlongloadtime": {
                 "name": "Force buffer tank loading (minutes)"
@@ -246,94 +246,94 @@
                 "name": "Anti-Legionella Hour"
             },
             "circuit1curvefloor": {
-                "name": "Circuit 1 Heating Curve (Floor)"
+                "name": "Heating Curve (Floor)"
             },
             "circuit1curveradiator": {
-                "name": "Circuit 1 Heating Curve (Radiator)"
+                "name": "Heating Curve (Radiator)"
             },
             "circuit1basetemp": {
-                "name": "Circuit 1 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit1tempreduction": {
-                "name": "Circuit 1 Night Setback"
+                "name": "Night Setback"
             },
             "circuit2curvefloor": {
-                "name": "Circuit 2 Heating Curve (Floor)"
+                "name": "Heating Curve (Floor)"
             },
             "circuit2curveradiator": {
-                "name": "Circuit 2 Heating Curve (Radiator)"
+                "name": "Heating Curve (Radiator)"
             },
             "circuit2basetemp": {
-                "name": "Circuit 2 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit2tempreduction": {
-                "name": "Circuit 2 Night Setback"
+                "name": "Night Setback"
             },
             "circuit3curvefloor": {
-                "name": "Circuit 3 Heating Curve (Floor)"
+                "name": "Heating Curve (Floor)"
             },
             "circuit3curveradiator": {
-                "name": "Circuit 3 Heating Curve (Radiator)"
+                "name": "Heating Curve (Radiator)"
             },
             "circuit3basetemp": {
-                "name": "Circuit 3 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit3tempreduction": {
-                "name": "Circuit 3 Night Setback"
+                "name": "Night Setback"
             },
             "circuit4curvefloor": {
-                "name": "Circuit 4 Heating Curve (Floor)"
+                "name": "Heating Curve (Floor)"
             },
             "circuit4curveradiator": {
-                "name": "Circuit 4 Heating Curve (Radiator)"
+                "name": "Heating Curve (Radiator)"
             },
             "circuit4basetemp": {
-                "name": "Circuit 4 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit4tempreduction": {
-                "name": "Circuit 4 Night Setback"
+                "name": "Night Setback"
             },
             "circuit5curvefloor": {
-                "name": "Circuit 5 Heating Curve (Floor)"
+                "name": "Heating Curve (Floor)"
             },
             "circuit5curveradiator": {
-                "name": "Circuit 5 Heating Curve (Radiator)"
+                "name": "Heating Curve (Radiator)"
             },
             "circuit5basetemp": {
-                "name": "Circuit 5 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit5tempreduction": {
-                "name": "Circuit 5 Night Setback"
+                "name": "Night Setback"
             },
             "circuit6basetemp": {
-                "name": "Circuit 6 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit6tempreduction": {
-                "name": "Circuit 6 Night Setback"
+                "name": "Night Setback"
             },
             "circuit7curvefloor": {
-                "name": "Circuit 7 Heating Curve (Floor)"
+                "name": "Heating Curve (Floor)"
             },
             "circuit7curveradiator": {
-                "name": "Circuit 7 Heating Curve (Radiator)"
+                "name": "Heating Curve (Radiator)"
             },
             "circuit7basetemp": {
-                "name": "Circuit 7 Base Temperature"
+                "name": "Base Temperature"
             },
             "circuit7tempreduction": {
-                "name": "Circuit 7 Night Setback"
+                "name": "Night Setback"
             },
             "circulationtempstart": {
-                "name": "DHW circulation start temperature"
+                "name": "Circulation start temperature"
             },
             "circulationhisttemp": {
-                "name": "DHW circulation hysteresis"
+                "name": "Circulation hysteresis"
             },
             "circulationtimework": {
-                "name": "DHW circulation run time (min)"
+                "name": "Circulation run time (min)"
             },
             "circulationtimestop": {
-                "name": "DHW circulation pause time (min)"
+                "name": "Circulation pause time (min)"
             },
             "circuit1minsetpointcooling": {
                 "name": "Cooling setpoint min"
@@ -398,10 +398,10 @@
         },
         "switch": {
             "hdwstartoneloading": {
-                "name": "Force DHW reload"
+                "name": "Force reload"
             },
             "hdwpumpforce": {
-                "name": "DHW pump → Solar buffer"
+                "name": "Pump → Solar buffer"
             },
             "hdwstartlegion": {
                 "name": "Anti-Legionella Cycle"
@@ -415,7 +415,7 @@
         },
         "select": {
             "hdwusermode": {
-                "name": "DHW Mode",
+                "name": "Mode",
                 "state": {
                     "off": "Off",
                     "manual": "Manual",

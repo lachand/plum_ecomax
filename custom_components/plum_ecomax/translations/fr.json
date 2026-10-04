@@ -155,25 +155,25 @@
                 "name": "Ouverture Vanne"
             },
             "circuit1name": {
-                "name": "Nom Circuit 1"
+                "name": "Nom"
             },
             "circuit2name": {
-                "name": "Nom Circuit 2"
+                "name": "Nom"
             },
             "circuit3name": {
-                "name": "Nom Circuit 3"
+                "name": "Nom"
             },
             "circuit4name": {
-                "name": "Nom Circuit 4"
+                "name": "Nom"
             },
             "circuit5name": {
-                "name": "Nom Circuit 5"
+                "name": "Nom"
             },
             "circuit6name": {
-                "name": "Nom Circuit 6"
+                "name": "Nom"
             },
             "circuit7name": {
-                "name": "Nom Circuit 7"
+                "name": "Nom"
             },
             "detectalarmsettings": {
                 "name": "Réglages détection alarme (brut)"
@@ -225,13 +225,13 @@
         },
         "number": {
             "hdwtsetpoint": {
-                "name": "Consigne ECS"
+                "name": "Consigne"
             },
             "hdwminsettemp": {
-                "name": "ECS Min"
+                "name": "Min"
             },
             "hdwmaxsettemp": {
-                "name": "ECS Max"
+                "name": "Max"
             },
             "buforlongloadtime": {
                 "name": "Forcer chargement ballon tampon (minutes)"
@@ -246,94 +246,94 @@
                 "name": "Heure cycle anti-légionellose"
             },
             "circuit1curvefloor": {
-                "name": "Courbe de chauffe Circuit 1 (plancher)"
+                "name": "Courbe de chauffe (plancher)"
             },
             "circuit1curveradiator": {
-                "name": "Courbe de chauffe Circuit 1 (radiateur)"
+                "name": "Courbe de chauffe (radiateur)"
             },
             "circuit1basetemp": {
-                "name": "Température de base Circuit 1"
+                "name": "Température de base"
             },
             "circuit1tempreduction": {
-                "name": "Réduction nocturne Circuit 1"
+                "name": "Réduction nocturne"
             },
             "circuit2curvefloor": {
-                "name": "Courbe de chauffe Circuit 2 (plancher)"
+                "name": "Courbe de chauffe (plancher)"
             },
             "circuit2curveradiator": {
-                "name": "Courbe de chauffe Circuit 2 (radiateur)"
+                "name": "Courbe de chauffe (radiateur)"
             },
             "circuit2basetemp": {
-                "name": "Température de base Circuit 2"
+                "name": "Température de base"
             },
             "circuit2tempreduction": {
-                "name": "Réduction nocturne Circuit 2"
+                "name": "Réduction nocturne"
             },
             "circuit3curvefloor": {
-                "name": "Courbe de chauffe Circuit 3 (plancher)"
+                "name": "Courbe de chauffe (plancher)"
             },
             "circuit3curveradiator": {
-                "name": "Courbe de chauffe Circuit 3 (radiateur)"
+                "name": "Courbe de chauffe (radiateur)"
             },
             "circuit3basetemp": {
-                "name": "Température de base Circuit 3"
+                "name": "Température de base"
             },
             "circuit3tempreduction": {
-                "name": "Réduction nocturne Circuit 3"
+                "name": "Réduction nocturne"
             },
             "circuit4curvefloor": {
-                "name": "Courbe de chauffe Circuit 4 (plancher)"
+                "name": "Courbe de chauffe (plancher)"
             },
             "circuit4curveradiator": {
-                "name": "Courbe de chauffe Circuit 4 (radiateur)"
+                "name": "Courbe de chauffe (radiateur)"
             },
             "circuit4basetemp": {
-                "name": "Température de base Circuit 4"
+                "name": "Température de base"
             },
             "circuit4tempreduction": {
-                "name": "Réduction nocturne Circuit 4"
+                "name": "Réduction nocturne"
             },
             "circuit5curvefloor": {
-                "name": "Courbe de chauffe Circuit 5 (plancher)"
+                "name": "Courbe de chauffe (plancher)"
             },
             "circuit5curveradiator": {
-                "name": "Courbe de chauffe Circuit 5 (radiateur)"
+                "name": "Courbe de chauffe (radiateur)"
             },
             "circuit5basetemp": {
-                "name": "Température de base Circuit 5"
+                "name": "Température de base"
             },
             "circuit5tempreduction": {
-                "name": "Réduction nocturne Circuit 5"
+                "name": "Réduction nocturne"
             },
             "circuit6basetemp": {
-                "name": "Température de base Circuit 6"
+                "name": "Température de base"
             },
             "circuit6tempreduction": {
-                "name": "Réduction nocturne Circuit 6"
+                "name": "Réduction nocturne"
             },
             "circuit7curvefloor": {
-                "name": "Courbe de chauffe Circuit 7 (plancher)"
+                "name": "Courbe de chauffe (plancher)"
             },
             "circuit7curveradiator": {
-                "name": "Courbe de chauffe Circuit 7 (radiateur)"
+                "name": "Courbe de chauffe (radiateur)"
             },
             "circuit7basetemp": {
-                "name": "Température de base Circuit 7"
+                "name": "Température de base"
             },
             "circuit7tempreduction": {
-                "name": "Réduction nocturne Circuit 7"
+                "name": "Réduction nocturne"
             },
             "circulationtempstart": {
-                "name": "Température de départ circulation ECS"
+                "name": "Température de départ circulation"
             },
             "circulationhisttemp": {
-                "name": "Hystérésis circulation ECS"
+                "name": "Hystérésis circulation"
             },
             "circulationtimework": {
-                "name": "Durée de marche circulation ECS (min)"
+                "name": "Durée de marche circulation (min)"
             },
             "circulationtimestop": {
-                "name": "Durée d'arrêt circulation ECS (min)"
+                "name": "Durée d'arrêt circulation (min)"
             },
             "circuit1minsetpointcooling": {
                 "name": "Consigne refroidissement min"
@@ -398,10 +398,10 @@
         },
         "switch": {
             "hdwstartoneloading": {
-                "name": "Forcer le rechargement ECS"
+                "name": "Forcer le rechargement"
             },
             "hdwpumpforce": {
-                "name": "Pompe ECS → Ballon solaire"
+                "name": "Pompe → Ballon solaire"
             },
             "hdwstartlegion": {
                 "name": "Cycle anti-légionellose"
@@ -415,7 +415,7 @@
         },
         "select": {
             "hdwusermode": {
-                "name": "Mode ECS",
+                "name": "Mode",
                 "state": {
                     "off": "Arrêt",
                     "manual": "Manuel",
