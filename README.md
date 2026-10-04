@@ -148,6 +148,16 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 1.0.0
+
+First stable release: every rule of the Home Assistant integration quality scale is met or justified as not applicable (see `custom_components/plum_ecomax/quality_scale.yaml`, a self-assessment). Nothing to reconfigure, but three behaviours change from 0.8.x:
+
+* **Actions can now fail.** A command that changes a boiler setting waits for the boiler's confirmation; if it never confirms, the previous value is restored and the action reports *"The boiler did not confirm writing …"* (or *"rejected"*, with the boiler's code). Before, the call always looked successful and the outcome was only visible in the logs. The ecoNET module ignores some requests (see Troubleshooting), so an occasional "did not confirm" is expected: try again.
+* **`plum_ecomax.set_schedule` and `plum_ecomax.solar_to_buffer` stay registered** as long as the integration is set up, and refuse to run with a clear message when no boiler is loaded, a circuit is not active, or the boiler exposes no such schedule.
+* **Raw diagnostic registers are created disabled** on new installs (alarm-detection settings, work states, circulation state); existing entities are untouched. The alarm bits stay enabled.
+
+Also new: entity icons come from `icons.json`, the integration ships an icon and a logo, the config-flow fields have descriptions, removing the integration deletes the saved reference-values snapshot, and `mypy --strict` runs in CI. Restart Home Assistant after updating.
+
 ### Upgrading to 0.8.5
 
 Internal restructuring, **no behaviour change** and no new entities. The three largest modules were split along their natural seams: the persistent connection moved out of the driver (`transport.py`), the automatic solar-dump controller out of the solar-dump session (`solar_dump_auto.py`), and the reading validation and detection-candidate list out of the coordinator (`parameters.py`). The driver and the write path (manual mode, DHW pump force, return to automatic on unload) were re-checked against a real boiler after the split. Test coverage rose from 87 % to 98 % (unit tests plus tests against a real Home Assistant). Restart Home Assistant after updating.
