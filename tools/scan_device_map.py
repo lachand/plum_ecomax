@@ -83,7 +83,7 @@ async def phase2_probe_invalid_pid_in_batch(device: PlumDevice) -> str:
     fake_param = {"type": "SHORT_INT", "exponent": 0}
     mixed_items = [good_pids[0], (INVALID_PID, fake_param), good_pids[1]]
 
-    result = await asyncio.to_thread(device._sync_get_values_batch, mixed_items)
+    result = await device._read_values_batch(mixed_items)
 
     good_pid_values = {pid: result.get(pid) for pid, _ in good_pids}
     print(f"  Lot envoyé : {good[0]} (pid={good_pids[0][0]}), pid invalide={INVALID_PID}, {good[1]} (pid={good_pids[1][0]})")

@@ -40,6 +40,7 @@ def _fake_hass():
 def _patch_device(monkeypatch, *, load_map_error=None, get_value_return=42, get_value_error=None):
     fake_device = MagicMock()
     fake_device.load_map = MagicMock(side_effect=load_map_error)
+    fake_device.async_close = AsyncMock()
     if get_value_error is not None:
         fake_device.get_value = AsyncMock(side_effect=get_value_error)
     else:
@@ -248,7 +249,7 @@ class TestSerialProbe:
     def _device_with(monkeypatch, answers):
         dev = MagicMock()
         dev.load_map = MagicMock()
-        dev.close = MagicMock()
+        dev.async_close = AsyncMock()
 
         async def get_value(slug, retries=3):
             ans = answers[slug]

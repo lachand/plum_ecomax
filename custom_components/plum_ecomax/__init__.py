@@ -141,7 +141,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry):
         # (persistent connection) instead of closing it after every one --
         # tear it down explicitly here so a reload/removal doesn't leak an
         # open socket until garbage collection gets around to it.
-        await asyncio.to_thread(coordinator.device.close)
+        await coordinator.device.async_close()
         await async_unregister_schedule_service(hass)
         await async_unregister_solar_dump_service(hass)
     return unload_ok

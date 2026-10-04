@@ -1,6 +1,6 @@
 """Low-level communication layer for Plum EcoMAX devices.
 
-This module handles the TCP socket connections, frame construction (RS-485 over TCP),
+This module handles the asyncio TCP connection, frame construction (RS-485 over TCP),
 CRC calculation, and data encoding/decoding. It acts as the driver that talks
 directly to the ecoMax module.
 
@@ -14,7 +14,6 @@ Attributes:
 import asyncio
 import json
 import logging
-import socket
 import struct
 import time
 from pathlib import Path
@@ -46,6 +45,9 @@ VALUE_BYTE_LEN = {
 }
 DEFAULT_BATCH_SIZE = 16
 
+# Seconds allowed to open the TCP connection to the module.
+CONNECT_TIMEOUT = 5.0
+
 
 # Bundled parameter map, resolved from this file rather than from the HA config dir.
 DEVICE_MAP_PATH = Path(__file__).parent / "device_map_ecomax360i.json"
@@ -76,14 +78,15 @@ class PlumDevice:
         self.params_map: dict[str, Any] = {}
         self.session_id = 10
         self._data_cache = {}
-        # Serializes all socket transactions so a background write and a
+        # Serializes all transactions so a background write and a
         # polling read never open concurrent TCP connections to the boiler.
         self._io_lock = asyncio.Lock()
 
         # Persistent connection: reused across transactions instead of a
-        # fresh connect/close per request (see _socket_transaction). None
+        # fresh connect/close per request (see _transaction). None
         # means "not currently connected".
-        self._sock: socket.socket | None = None
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
         # Consecutive fully-failed transactions (both reconnect attempts
         # exhausted, or no valid frame within timeout) -- coordinator.py
         # surfaces a "connection lost" repair issue once this crosses a
@@ -201,8 +204,7 @@ class PlumDevice:
     async def get_value(self, slug: str, retries: int = 3) -> Any:
         """Asynchronously fetches a parameter value.
 
-        Wrapper around the synchronous `_sync_get_value` method, executed in a thread.
-        It implements a retry mechanism and caching strategy.
+        Wraps `_read_value_once` with a retry mechanism and a caching strategy.
 
         Args:
             slug: The string identifier of the parameter.
@@ -218,7 +220,7 @@ class PlumDevice:
 
         async with self._io_lock:
             for attempt in range(1, retries + 1):
-                val = await asyncio.to_thread(self._sync_get_value, pid, param)
+                val = await self._read_value_once(pid, param)
                 if val is not None:
                     self._data_cache[slug] = val  # Caching
                     return val
@@ -255,7 +257,7 @@ class PlumDevice:
             if not param:
                 continue
             # RAW (spec's STRING type) is variable-length with no size
-            # prefix on the wire -- _sync_get_values_batch can't know where
+            # prefix on the wire -- _read_value_onces_batch can't know where
             # it ends without decoding it, which would break walking any
             # block that follows it in the same multi-block response. Read
             # these individually instead of batching them.
@@ -271,7 +273,7 @@ class PlumDevice:
             for i in range(0, len(items), batch_size):
                 chunk = items[i : i + batch_size]
                 for attempt in range(1, retries + 1):
-                    values = await asyncio.to_thread(self._sync_get_values_batch, chunk)
+                    values = await self._read_values_batch(chunk)
                     for pid, val in values.items():
                         if val is None:
                             continue
@@ -287,7 +289,7 @@ class PlumDevice:
                 param = self.params_map[slug]
                 pid = param["id"]
                 for attempt in range(1, retries + 1):
-                    val = await asyncio.to_thread(self._sync_get_value, pid, param)
+                    val = await self._read_value_once(pid, param)
                     if val is not None:
                         results[slug] = val
                         self._data_cache[slug] = val
@@ -329,18 +331,18 @@ class PlumDevice:
 
         async with self._io_lock:
             for _attempt in range(1, 4):
-                if await asyncio.to_thread(self._sync_set_value, pid, full_payload):
+                if await self._write_value_once(pid, full_payload):
                     return True
                 await asyncio.sleep(1.0)
         return False
 
-    # --- SYNC WORKERS ---
-    def _sync_get_value(self, pid: int, param: dict) -> Any:
-        """Blocking worker to fetch a single value."""
+    # --- TRANSACTION WORKERS ---
+    async def _read_value_once(self, pid: int, param: dict) -> Any:
+        """Fetches a single value in one transaction (no retry)."""
         self.session_id = (self.session_id + 1) % 65000
         payload = struct.pack("<HB BH", self.session_id, 1, 1, pid)
         frame = self._build_frame(CMD_READ_VAL, payload)
-        result = self._socket_transaction(frame)
+        result = await self._transaction(frame)
         if result is None:
             return None
 
@@ -366,11 +368,11 @@ class PlumDevice:
 
         return self._decode(resp[7:], param)
 
-    def _sync_set_value(self, pid: int, payload: bytes) -> bool:
-        """Blocking worker to write a value."""
+    async def _write_value_once(self, pid: int, payload: bytes) -> bool:
+        """Writes a value in one transaction (no retry)."""
         self.session_id = (self.session_id + 1) % 65000
         frame = self._build_frame(CMD_WRITE_FORCE, payload)
-        result = self._socket_transaction(frame)
+        result = await self._transaction(frame)
         if result is None:
             return False
 
@@ -403,8 +405,8 @@ class PlumDevice:
         self.last_write_error = None
         return True
 
-    def _sync_get_values_batch(self, items: list) -> dict[int, Any]:
-        """Blocking worker to fetch several values in a single frame.
+    async def _read_values_batch(self, items: list) -> dict[int, Any]:
+        """Fetches several values in a single frame.
 
         Builds one block per requested pid (spec 1.5.3.12), each holding
         exactly one parameter, so the response mirrors the request
@@ -427,7 +429,7 @@ class PlumDevice:
         blocks = b"".join(struct.pack("<BH", 1, pid) for pid, _ in items)
         frame = self._build_frame(CMD_READ_VAL, header + blocks)
 
-        result = self._socket_transaction(frame, timeout=3.0)
+        result = await self._transaction(frame, timeout=3.0)
         if result is None:
             return {}
 
@@ -500,34 +502,47 @@ class PlumDevice:
                 crc &= 0xFFFF
         return crc
 
-    def _ensure_connection(self) -> socket.socket:
-        """Returns the persistent socket, opening a fresh one if needed."""
-        if self._sock is None:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(5.0)
-            sock.connect((self.ip, self.port))
-            self._sock = sock
-        return self._sock
+    async def _ensure_connection(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+        """Returns the persistent connection, opening a fresh one if needed."""
+        if self._reader is None or self._writer is None:
+            async with asyncio.timeout(CONNECT_TIMEOUT):
+                self._reader, self._writer = await asyncio.open_connection(self.ip, self.port)
+        return self._reader, self._writer
 
     def _close_connection(self) -> None:
-        """Tears down the persistent socket, if one is open."""
-        if self._sock is not None:
+        """Tears down the persistent connection, if one is open.
+
+        Never blocks: StreamWriter.close() only schedules the transport
+        shutdown on the event loop.
+        """
+        writer, self._reader, self._writer = self._writer, None, None
+        if writer is not None:
             try:
-                self._sock.close()
+                writer.close()
             except OSError:
                 pass
-            self._sock = None
 
     def close(self) -> None:
         """Public, explicit teardown of the persistent connection.
 
         Called on integration unload/reload and after a one-shot
-        config_flow connection probe, so a stale socket doesn't linger
-        until garbage collection.
+        config_flow connection probe, so a stale connection doesn't linger
+        until garbage collection. Must run on the event loop.
         """
         self._close_connection()
 
-    def _socket_transaction(self, frame: bytes, timeout: float = 2.0) -> tuple | None:
+    async def async_close(self) -> None:
+        """Like close(), but also waits for the transport to finish closing."""
+        writer = self._writer
+        self._close_connection()
+        if writer is not None:
+            try:
+                async with asyncio.timeout(CONNECT_TIMEOUT):
+                    await writer.wait_closed()
+            except (OSError, TimeoutError):
+                pass
+
+    async def _transaction(self, frame: bytes, timeout: float = 2.0) -> tuple | None:
         """Executes one request/response transaction over a persistent
         connection, reusing it across calls instead of reconnecting for
         every single transaction (a full TCP handshake per read/write adds
@@ -536,8 +551,8 @@ class PlumDevice:
         Any anomaly closes the connection so the *next* transaction starts
         clean rather than risking a desynced stream: a hard socket error
         (dead/reset connection) retries once against a freshly reconnected
-        socket within this same call, since that's the case most likely to
-        just be a transient drop (e.g. the boiler closed our idle
+        connection within this same call, since that's the case most likely
+        to just be a transient drop (e.g. the boiler closed our idle
         connection) rather than the boiler being genuinely unreachable. A
         plain timeout (nothing invalid, just no data in time) closes the
         connection too but does NOT retry inline -- callers already retry
@@ -546,18 +561,21 @@ class PlumDevice:
         obviously better than letting that existing retry loop handle it.
 
         Known limitation: _read_response's buffer is local to one call, so
-        any bytes received past the first valid frame in the same recv()
-        chunk are discarded rather than carried over to the next
-        transaction. Not implemented, because it isn't expected to matter
-        here: this is a strict request/response protocol (the boiler only
-        answers what we just asked), so a recv() spanning more than the
-        current response would only happen for a stale/duplicate frame --
-        exactly the desync case this method already handles by closing
-        and letting the caller retry, not silently misreading data.
+        any bytes received past the first valid frame in the same read
+        are discarded rather than carried over to the next transaction.
+        Not implemented, because it isn't expected to matter here: this is
+        a strict request/response protocol (the boiler only answers what we
+        just asked), so a read spanning more than the current response
+        would only happen for a stale/duplicate frame -- exactly the desync
+        case this method already handles by closing and letting the caller
+        retry, not silently misreading data.
+
+        The whole transaction is bounded by asyncio.timeout(), so a stalled
+        peer can never hold the event loop's I/O lock open indefinitely.
 
         Args:
             frame: The binary frame to send.
-            timeout: Socket timeout, in seconds.
+            timeout: Time budget for sending and receiving, in seconds.
 
         Returns:
             Optional[tuple[int, bytes]]: (func, payload) of the first
@@ -565,65 +583,67 @@ class PlumDevice:
         """
         for attempt in (1, 2):
             try:
-                sock = self._ensure_connection()
-            except OSError as e:
+                reader, writer = await self._ensure_connection()
+            except OSError as e:  # includes TimeoutError
                 logger.debug("Connect failed (attempt %d/2): %s", attempt, e)
+                self._close_connection()
                 self.consecutive_failures += 1
                 if attempt == 2:
                     return None
                 continue
 
             try:
-                sock.settimeout(timeout)
-                sock.send(frame)
-                result = self._read_response(sock, timeout)
+                async with asyncio.timeout(timeout):
+                    writer.write(frame)
+                    await writer.drain()
+                    result = await self._read_response(reader)
+            except asyncio.CancelledError:
+                # Cancelled mid-exchange (e.g. an integration unload): the
+                # boiler's answer may still arrive and would be misread as
+                # the reply to the next request, so drop the connection.
+                self._close_connection()
+                raise
+            except TimeoutError:
+                # No valid frame in time -- don't trust this connection for
+                # the next transaction, but don't retry inline either (see
+                # docstring).
+                self._close_connection()
+                self.consecutive_failures += 1
+                return None
             except OSError as e:
-                logger.debug("Socket transaction failed (attempt %d/2): %s", attempt, e)
+                logger.debug("Transaction failed (attempt %d/2): %s", attempt, e)
                 self._close_connection()
                 self.consecutive_failures += 1
                 if attempt == 2:
                     return None
                 continue
-
-            if result is None:
-                # Timed out without finding a valid frame -- don't trust
-                # this connection for the next transaction, but don't
-                # retry inline either (see docstring).
-                self._close_connection()
-                self.consecutive_failures += 1
-                return None
 
             self.consecutive_failures = 0
             self.last_success_ts = time.time()
             return result
         return None
 
-    def _read_response(self, sock: socket.socket, timeout: float) -> tuple | None:
-        """Reads from an already-connected socket until a structurally
-        valid frame is found or the deadline passes.
+    async def _read_response(self, reader: asyncio.StreamReader) -> tuple:
+        """Reads until a structurally valid frame is found.
+
+        Has no deadline of its own: the caller wraps it in asyncio.timeout(),
+        which cancels the pending read when the budget runs out.
 
         Args:
-            sock: The connected socket to read from.
-            timeout: Total time budget, in seconds.
+            reader: The connected stream to read from.
 
         Returns:
-            Optional[tuple[int, bytes]]: (func, payload), or None if no
-            valid frame arrived in time.
+            tuple[int, bytes]: (func, payload) of the first valid frame.
 
         Raises:
-            OSError: If the peer closes the connection (recv() returns no
+            OSError: If the peer closes the connection (read() returns no
                 data) -- treated as a hard failure by the caller, which
                 closes and retries once against a fresh connection, same
-                as any other socket error.
+                as any other connection error.
         """
         buffer = bytearray()
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            sock.settimeout(max(deadline - time.time(), 0.01))
-            try:
-                chunk = sock.recv(1024)
-            except TimeoutError:
-                break
+        while True:
+            chunk = await reader.read(1024)
             if not chunk:
                 raise OSError("Connection closed by peer")
             buffer.extend(chunk)
@@ -631,7 +651,6 @@ class PlumDevice:
             result = self._extract_valid_frame(buffer)
             if result is not None:
                 return result
-        return None
 
     def _extract_valid_frame(self, buffer: bytearray) -> tuple | None:
         """Scans a buffer for the first structurally valid response frame.
@@ -641,7 +660,7 @@ class PlumDevice:
         trusting the first '0x68 ... 0x16' shape found in the buffer.
 
         Args:
-            buffer: The accumulated bytes read from the socket so far.
+            buffer: The accumulated bytes read from the connection so far.
 
         Returns:
             Optional[tuple[int, bytes]]: (func, payload), or None if no

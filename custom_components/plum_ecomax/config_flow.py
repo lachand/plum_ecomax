@@ -131,7 +131,7 @@ async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]
         # closed after every transaction, so it has to be closed
         # explicitly here or it leaks an open socket until garbage
         # collection gets around to the object.
-        await asyncio.to_thread(device.close)
+        await device.async_close()
 
     if value is None:
         return "cannot_connect", None

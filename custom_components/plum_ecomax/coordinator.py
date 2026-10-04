@@ -358,7 +358,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
 
         Sends the command up to 5 times, 2 seconds apart, stopping as soon
         as `device.set_value()` reports a confirmed write (the boiler's own
-        0xE5 result code, validated in plum_device._sync_set_value -- not
+        0xE5 result code, validated in plum_device._write_value_once -- not
         just "a response arrived"). If none of the 5 attempts are
         confirmed, the optimistic cache entry is reverted so the UI doesn't
         keep showing a value the boiler never actually applied. Either way,
