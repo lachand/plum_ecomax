@@ -107,12 +107,6 @@ class PlumEconetSwitch(CoordinatorEntity[PlumDataUpdateCoordinator], SwitchEntit
         return None
 
     @property
-    def icon(self) -> str | None:
-        if self._slug == "operatingmode":
-            return "mdi:hand-back-right" if self.is_on else "mdi:cog-play"
-        return None
-
-    @property
     def device_info(self) -> DeviceInfo | None:
         if self._slug in HDW_SWITCHES:
             return hdw_device_info(self._entry_id)
@@ -150,7 +144,6 @@ class PlumSolarDumpAutoSwitch(
 
     _attr_has_entity_name = True
     _attr_translation_key = "solar_dump_auto"
-    _attr_icon = "mdi:sun-clock"
 
     def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator)

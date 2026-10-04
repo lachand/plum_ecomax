@@ -8,6 +8,7 @@ from datetime import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.plum_ecomax.const import CONF_ACTIVE_CIRCUITS
 from custom_components.plum_ecomax.schedule import (
@@ -83,15 +84,42 @@ class TestSetScheduleService:
         assert writes == {"hdwmondayam": 0, "hdwmondaypm": 0}
 
     @pytest.mark.asyncio
-    async def test_skips_circuit_not_in_active_circuits(self):
+    async def test_a_circuit_that_is_not_active_is_refused_and_nothing_is_written(self):
         params = {"circuit3mondayam": {}, "circuit3mondaypm": {}}
         hass, coordinator = self._hass_with_coordinator(params, active=("2",))
         call = MagicMock()
         call.data = {"circuit": 3, "days": ["monday"], "comfort_blocks": []}
 
-        await _handle_set_schedule(hass, call)
+        with pytest.raises(ServiceValidationError) as err:
+            await _handle_set_schedule(hass, call)
 
+        assert err.value.translation_key == "circuit_not_active"
+        assert err.value.translation_placeholders == {"circuit": "3"}
         coordinator.async_set_value.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_a_target_the_boiler_does_not_expose_is_refused(self):
+        hass, coordinator = self._hass_with_coordinator({}, active=("2",))  # empty map
+        call = MagicMock()
+        call.data = {"circuit": 2, "days": ["monday"], "comfort_blocks": []}
+
+        with pytest.raises(ServiceValidationError) as err:
+            await _handle_set_schedule(hass, call)
+
+        assert err.value.translation_key == "schedule_not_supported"
+        coordinator.async_set_value.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_no_loaded_entry_is_refused(self):
+        hass = MagicMock()
+        hass.config_entries.async_loaded_entries.return_value = []
+        call = MagicMock()
+        call.data = {"days": ["monday"], "comfort_blocks": []}
+
+        with pytest.raises(ServiceValidationError) as err:
+            await _handle_set_schedule(hass, call)
+
+        assert err.value.translation_key == "no_entry_loaded"
 
     @pytest.mark.asyncio
     async def test_everyday_expands_to_all_seven_days(self):

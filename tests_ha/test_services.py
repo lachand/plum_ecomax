@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import datetime
 
+import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from tests_ha.fakes import DOMAIN, ENTRY_DATA, SERIAL, FakePlumDevice
@@ -148,3 +150,38 @@ async def test_removing_the_entry_deletes_its_saved_reference_values(hass, hass_
     await hass.async_block_till_done()
 
     assert key not in hass_storage
+
+
+async def test_a_write_the_boiler_never_confirms_fails_the_action_and_restores_the_state(
+    hass, monkeypatch
+):
+    monkeypatch.setattr("custom_components.plum_ecomax.coordinator.WRITE_RETRY_DELAY", 0)
+    _, device = await _loaded(hass)
+    target = "water_heater.dhw_domestic_hot_water"
+    before = hass.states.get(target).attributes.get("temperature")
+    FakePlumDevice.link_up = False  # the boiler stops confirming writes
+
+    with pytest.raises(HomeAssistantError) as err:
+        await _call(
+            hass, "water_heater", "set_temperature", {"entity_id": target, "temperature": 55}
+        )
+
+    assert err.value.translation_key == "write_failed"
+    assert err.value.translation_placeholders == {"slug": "hdwtsetpoint"}
+    assert hass.states.get(target).attributes.get("temperature") == before  # not left at 55
+    assert not _written(device, "hdwtsetpoint")
+
+
+async def test_set_schedule_for_an_inactive_circuit_is_a_validation_error(hass):
+    _, device = await _loaded(hass)
+
+    with pytest.raises(ServiceValidationError) as err:
+        await _call(
+            hass,
+            DOMAIN,
+            "set_schedule",
+            {"circuit": 5, "days": ["monday"], "comfort_blocks": []},  # only circuit 2 is active
+        )
+
+    assert err.value.translation_key == "circuit_not_active"
+    assert not device.writes

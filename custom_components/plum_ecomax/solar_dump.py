@@ -34,6 +34,7 @@ import voluptuous as vol
 from homeassistant.components import persistent_notification
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
 
 from .const import (
@@ -371,8 +372,7 @@ async def _handle_solar_to_buffer(hass: HomeAssistant, call: ServiceCall) -> Non
         e.entry_id: e.runtime_data for e in hass.config_entries.async_loaded_entries(DOMAIN)
     }
     if not coordinators:
-        _LOGGER.warning("solar_to_buffer called but no Plum EcoMAX config entry is loaded")
-        return
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_entry_loaded")
 
     for entry_id, coordinator in coordinators.items():
         _optimistic(coordinator, **{SOLAR_DUMP_FORCE_SLUG: SOLAR_DUMP_FORCE_VALUE})
@@ -424,9 +424,3 @@ def async_register_stop_listener(
         await async_stop_for_entry(hass, coordinator)
 
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop))
-
-
-async def async_unregister_services(hass: HomeAssistant) -> None:
-    """Drop the service when the last config entry unloads."""
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        hass.services.async_remove(DOMAIN, SERVICE_SOLAR_TO_BUFFER)

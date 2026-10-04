@@ -17,6 +17,7 @@ from datetime import time
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN, WEEKDAY_TO_SLUGS
@@ -119,14 +120,16 @@ async def _handle_set_schedule(hass: HomeAssistant, call: ServiceCall) -> None:
 
     coordinators = [e.runtime_data for e in hass.config_entries.async_loaded_entries(DOMAIN)]
     if not coordinators:
-        _LOGGER.warning("set_schedule called but no Plum EcoMAX config entry is loaded")
-        return
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_entry_loaded")
 
+    circuit = call.data.get("circuit")
+    circuit_known = False
+    written = False
     for coordinator in coordinators:
         selected = coordinator.config_entry.data.get(CONF_ACTIVE_CIRCUITS, [])
-        circuit = call.data.get("circuit")
         if circuit is not None and str(circuit) not in selected:
             continue
+        circuit_known = True
         for day_idx in days:
             suffix_am, suffix_pm = WEEKDAY_TO_SLUGS[day_idx]
             slug_am, slug_pm = f"{prefix}{suffix_am}", f"{prefix}{suffix_pm}"
@@ -135,6 +138,18 @@ async def _handle_set_schedule(hass: HomeAssistant, call: ServiceCall) -> None:
             _LOGGER.info("set_schedule: %s day=%d -> am=0x%06X pm=0x%06X", prefix, day_idx, am, pm)
             await coordinator.async_set_value(slug_am, am)
             await coordinator.async_set_value(slug_pm, pm)
+            written = True
+
+    if not circuit_known:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="circuit_not_active",
+            translation_placeholders={"circuit": str(circuit)},
+        )
+    if not written:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN, translation_key="schedule_not_supported"
+        )
 
 
 async def async_register_services(hass: HomeAssistant) -> None:
@@ -146,9 +161,3 @@ async def async_register_services(hass: HomeAssistant) -> None:
         await _handle_set_schedule(hass, call)
 
     hass.services.async_register(DOMAIN, SERVICE_SET_SCHEDULE, _service, schema=SET_SCHEDULE_SCHEMA)
-
-
-async def async_unregister_services(hass: HomeAssistant) -> None:
-    """Drop the service when the last config entry unloads."""
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        hass.services.async_remove(DOMAIN, SERVICE_SET_SCHEDULE)

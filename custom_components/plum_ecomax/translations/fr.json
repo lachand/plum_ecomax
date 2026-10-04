@@ -503,5 +503,22 @@
                 }
             }
         }
+    },
+    "exceptions": {
+        "write_failed": {
+            "message": "La chaudière n'a pas confirmé l'écriture de {slug} ; l'ancienne valeur a été rétablie."
+        },
+        "write_rejected": {
+            "message": "La chaudière a refusé l'écriture de {slug} (code {code}). Vérifiez l'utilisateur et le mot de passe avec Reconfigurer."
+        },
+        "no_entry_loaded": {
+            "message": "Aucune chaudière Plum ecoMAX n'est configurée ou chargée."
+        },
+        "circuit_not_active": {
+            "message": "Le circuit {circuit} n'est un circuit actif d'aucune chaudière Plum ecoMAX chargée."
+        },
+        "schedule_not_supported": {
+            "message": "Aucune des chaudières chargées n'expose de programme hebdomadaire pour cette cible."
+        }
     }
 }

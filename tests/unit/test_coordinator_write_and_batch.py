@@ -27,9 +27,10 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from custom_components.plum_ecomax.coordinator import PlumDataUpdateCoordinator
+from custom_components.plum_ecomax.coordinator import WRITE_ATTEMPTS, PlumDataUpdateCoordinator
 
 
 @pytest.fixture(autouse=True)
@@ -116,9 +117,12 @@ class TestWriteConfirmation:
         device.set_value = AsyncMock(return_value=False)
         coordinator = _make_coordinator(device=device, cache={"hdwpumpforce": 512})
 
-        await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=0)
+        with pytest.raises(HomeAssistantError):
+            await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=0)
 
-        assert device.set_value.await_count == 5  # all attempts exhausted, no early stop
+        assert (
+            device.set_value.await_count == WRITE_ATTEMPTS
+        )  # all attempts exhausted, no early stop
         assert coordinator._cache["hdwpumpforce"] == 0  # reverted, not left at the phantom value
         assert coordinator._timestamps["hdwpumpforce"] == 0
 
@@ -128,21 +132,61 @@ class TestWriteConfirmation:
         device.set_value = AsyncMock(return_value=False)
         coordinator = _make_coordinator(device=device, cache={"hdwpumpforce": 512})
 
-        await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=None)
+        with pytest.raises(HomeAssistantError):
+            await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=None)
 
         assert "hdwpumpforce" not in coordinator._cache
 
     @pytest.mark.asyncio
-    async def test_async_set_value_is_optimistic_and_schedules_confirmation(self):
+    async def test_async_set_value_is_optimistic_then_waits_for_the_confirmation(self):
         coordinator = _make_coordinator()
         coordinator._perform_repeated_write = AsyncMock()
 
         result = await coordinator.async_set_value("hdwpumpforce", 512)
-        await asyncio.sleep(0)  # let the scheduled background task actually start
 
         assert result is True
         assert coordinator._cache["hdwpumpforce"] == 512  # painted immediately
-        coordinator._perform_repeated_write.assert_called_once_with("hdwpumpforce", 512, None)
+        coordinator.async_set_updated_data.assert_called()
+        coordinator._perform_repeated_write.assert_awaited_once_with("hdwpumpforce", 512, None)
+
+    @pytest.mark.asyncio
+    async def test_async_set_value_raises_and_reverts_when_the_boiler_never_confirms(self):
+        device = MagicMock()
+        device.set_value = AsyncMock(return_value=False)
+        device.last_write_error = None
+        coordinator = _make_coordinator(device=device, cache={"hdwpumpforce": 0})
+
+        with pytest.raises(HomeAssistantError) as err:
+            await coordinator.async_set_value("hdwpumpforce", 512)
+
+        assert err.value.translation_domain == "plum_ecomax"
+        assert coordinator._cache["hdwpumpforce"] == 0  # back to what it was
+        assert coordinator._timestamps["hdwpumpforce"] == 0
+
+    @pytest.mark.asyncio
+    async def test_async_set_value_returns_true_once_confirmed(self):
+        device = MagicMock()
+        device.set_value = AsyncMock(return_value=True)
+        coordinator = _make_coordinator(device=device, cache={"hdwpumpforce": 0})
+
+        assert await coordinator.async_set_value("hdwpumpforce", 512) is True
+        assert coordinator._cache["hdwpumpforce"] == 512
+
+    @pytest.mark.asyncio
+    async def test_a_cancelled_write_does_not_leave_the_optimistic_value_behind(self):
+        coordinator = _make_coordinator(cache={"hdwpumpforce": 0})
+
+        async def _hang(*_a, **_k):
+            await asyncio.sleep(30)
+
+        coordinator._perform_repeated_write = _hang
+        task = asyncio.ensure_future(coordinator.async_set_value("hdwpumpforce", 512))
+        await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert coordinator._cache["hdwpumpforce"] == 0
 
 
 class TestBatchedPolling:
@@ -262,8 +306,11 @@ class TestWriteRejectedIssue:
             device=device, cache={"hdwpumpforce": 512}, entry_id="entryA"
         )
 
-        await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=0)
+        with pytest.raises(HomeAssistantError) as err:
+            await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=0)
 
+        assert err.value.translation_key == "write_rejected"
+        assert err.value.translation_placeholders == {"slug": "hdwpumpforce", "code": "0x7D"}
         mock_raise.assert_called_once()
         args, kwargs = mock_raise.call_args
         assert args[0] is coordinator.hass
@@ -288,8 +335,10 @@ class TestWriteRejectedIssue:
             device=device, cache={"hdwpumpforce": 512}, entry_id="entryA"
         )
 
-        await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=0)
+        with pytest.raises(HomeAssistantError) as err:
+            await coordinator._perform_repeated_write("hdwpumpforce", 512, previous_val=0)
 
+        assert err.value.translation_key == "write_failed"  # nothing specific to repair
         mock_raise.assert_not_called()
         mock_clear.assert_not_called()
 
@@ -301,7 +350,8 @@ class TestWriteRejectedIssue:
         device.last_write_error = 0x7F
         coordinator = _make_coordinator(device=device, cache={"otherslug": 1}, entry_id="entryB")
 
-        await coordinator._perform_repeated_write("otherslug", 1, previous_val=0)
+        with pytest.raises(HomeAssistantError):
+            await coordinator._perform_repeated_write("otherslug", 1, previous_val=0)
 
         assert mock_raise.call_args.args[1] == "write_rejected_entryB_otherslug"
 

@@ -650,3 +650,24 @@ class TestMalformedAnswers:
 
         assert await device._read_values_batch([]) == {}
         assert not opened
+
+
+class TestSetValueDeadLink:
+    async def test_a_dead_link_stops_the_write_retries_early(self, monkeypatch):
+        device = _make_device()
+        device.params_map = {"w": {"id": 9, "type": "WORD", "exponent": 0}}
+        attempts = []
+
+        async def _fail(pid, payload):
+            attempts.append(pid)
+            device.consecutive_failures += 2  # a failed transaction: 2 connect attempts
+            return False
+
+        async def _no_sleep(_s):
+            return None
+
+        monkeypatch.setattr(device, "_write_value_once", _fail)
+        monkeypatch.setattr(plum_device_module.asyncio, "sleep", _no_sleep)
+
+        assert await device.set_value("w", 5) is False
+        assert len(attempts) == 2  # 4 failures = LINK_DOWN_FAILURES: no third attempt

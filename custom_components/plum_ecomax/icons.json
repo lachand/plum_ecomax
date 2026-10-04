@@ -1,0 +1,318 @@
+{
+    "entity": {
+        "sensor": {
+            "tempwthr": {
+                "default": "mdi:thermometer"
+            },
+            "boilerpower": {
+                "default": "mdi:flash"
+            },
+            "tempcwu": {
+                "default": "mdi:water-boiler"
+            },
+            "hdwpumpstate": {
+                "default": "mdi:pump"
+            },
+            "tempbuforup": {
+                "default": "mdi:water"
+            },
+            "tempbufordown": {
+                "default": "mdi:water"
+            },
+            "tempclutch": {
+                "default": "mdi:fire-alert"
+            },
+            "buforsetpoint": {
+                "default": "mdi:target"
+            },
+            "tempcircuit2": {
+                "default": "mdi:radiator"
+            },
+            "tempcircuit3": {
+                "default": "mdi:radiator"
+            },
+            "tempcircuit4": {
+                "default": "mdi:radiator"
+            },
+            "tempcircuit5": {
+                "default": "mdi:radiator"
+            },
+            "tempcircuit6": {
+                "default": "mdi:radiator"
+            },
+            "tempcircuit7": {
+                "default": "mdi:radiator"
+            },
+            "circuit1thermostattemp": {
+                "default": "mdi:radiator"
+            },
+            "circuit2thermostattemp": {
+                "default": "mdi:radiator"
+            },
+            "circuit3thermostattemp": {
+                "default": "mdi:radiator"
+            },
+            "circuit4thermostattemp": {
+                "default": "mdi:radiator"
+            },
+            "circuit5thermostattemp": {
+                "default": "mdi:radiator"
+            },
+            "circuit7thermostattemp": {
+                "default": "mdi:radiator"
+            },
+            "mixer1valveposition": {
+                "default": "mdi:valve"
+            },
+            "mixer2valveposition": {
+                "default": "mdi:valve"
+            },
+            "mixer3valveposition": {
+                "default": "mdi:valve"
+            },
+            "mixer4valveposition": {
+                "default": "mdi:valve"
+            },
+            "mixer5valveposition": {
+                "default": "mdi:valve"
+            },
+            "mixer6valveposition": {
+                "default": "mdi:valve"
+            },
+            "mixer7valveposition": {
+                "default": "mdi:valve"
+            },
+            "circuit1name": {
+                "default": "mdi:label-outline"
+            },
+            "circuit2name": {
+                "default": "mdi:label-outline"
+            },
+            "circuit3name": {
+                "default": "mdi:label-outline"
+            },
+            "circuit4name": {
+                "default": "mdi:label-outline"
+            },
+            "circuit5name": {
+                "default": "mdi:label-outline"
+            },
+            "circuit6name": {
+                "default": "mdi:label-outline"
+            },
+            "circuit7name": {
+                "default": "mdi:label-outline"
+            },
+            "detectalarmsettings": {
+                "default": "mdi:bell-cog-outline"
+            },
+            "detectalarmstate": {
+                "default": "mdi:bell-cog-outline"
+            },
+            "workstate2": {
+                "default": "mdi:chip"
+            },
+            "workstate3": {
+                "default": "mdi:chip"
+            },
+            "workstate4": {
+                "default": "mdi:chip"
+            },
+            "circulationstate": {
+                "default": "mdi:pump"
+            },
+            "last_communication": {
+                "default": "mdi:lan-connect"
+            },
+            "consecutive_failures": {
+                "default": "mdi:lan-disconnect"
+            },
+            "solar_dump_runtime_today": {
+                "default": "mdi:timer-play-outline"
+            }
+        },
+        "number": {
+            "buforlongloadtime": {
+                "default": "mdi:timer"
+            },
+            "hdwlegionsetpoint": {
+                "default": "mdi:bacteria-outline"
+            },
+            "hdwlegionday": {
+                "default": "mdi:calendar"
+            },
+            "hdwlegionhour": {
+                "default": "mdi:clock-outline"
+            },
+            "circulationtempstart": {
+                "default": "mdi:thermometer-water"
+            },
+            "circulationhisttemp": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circulationtimework": {
+                "default": "mdi:timer-play"
+            },
+            "circulationtimestop": {
+                "default": "mdi:timer-pause"
+            },
+            "circuit1curvefloor": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit1curveradiator": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit1basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit1tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit1minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit1maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit2curvefloor": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit2curveradiator": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit2basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit2tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit2minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit2maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit3curvefloor": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit3curveradiator": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit3basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit3tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit3minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit3maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit4curvefloor": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit4curveradiator": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit4basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit4tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit4minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit4maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit5curvefloor": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit5curveradiator": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit5basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit5tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit5minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit5maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit6basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit6tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit6minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit6maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit7curvefloor": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit7curveradiator": {
+                "default": "mdi:chart-bell-curve"
+            },
+            "circuit7basetemp": {
+                "default": "mdi:thermometer"
+            },
+            "circuit7tempreduction": {
+                "default": "mdi:thermometer-minus"
+            },
+            "circuit7minsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "circuit7maxsetpointcooling": {
+                "default": "mdi:snowflake-thermometer"
+            },
+            "solar_dump_start_temp": {
+                "default": "mdi:thermometer-chevron-up"
+            },
+            "solar_dump_stop_temp": {
+                "default": "mdi:thermometer-chevron-down"
+            },
+            "solar_dump_auto_ecs_floor": {
+                "default": "mdi:water-thermometer"
+            },
+            "solar_dump_buffer_target": {
+                "default": "mdi:target"
+            },
+            "solar_dump_dt_start": {
+                "default": "mdi:delta"
+            },
+            "solar_dump_daily_budget": {
+                "default": "mdi:timer-cog-outline"
+            }
+        },
+        "switch": {
+            "operatingmode": {
+                "default": "mdi:cog-play",
+                "state": {
+                    "on": "mdi:hand-back-right"
+                }
+            },
+            "solar_dump_auto": {
+                "default": "mdi:sun-clock"
+            }
+        }
+    },
+    "services": {
+        "set_schedule": {
+            "service": "mdi:calendar-clock"
+        },
+        "solar_to_buffer": {
+            "service": "mdi:solar-power"
+        }
+    }
+}

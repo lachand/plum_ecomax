@@ -14,6 +14,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.plum_ecomax import solar_dump
 from custom_components.plum_ecomax.const import (
@@ -150,10 +151,14 @@ async def _wait_until(predicate, turns=500):
 
 
 @pytest.mark.asyncio
-async def test_no_coordinators_is_a_noop(caplog):
+async def test_no_loaded_entry_is_refused_with_a_translated_error():
     hass = _make_hass()
     set_loaded_entries(hass, {})
-    await _handle_solar_to_buffer(hass, _make_call(30))
+
+    with pytest.raises(ServiceValidationError) as err:
+        await _handle_solar_to_buffer(hass, _make_call(30))
+
+    assert err.value.translation_key == "no_entry_loaded"
     assert not _running_tasks()
 
 

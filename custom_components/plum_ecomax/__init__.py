@@ -20,12 +20,10 @@ from .coordinator import PlumDataUpdateCoordinator
 from .device import async_remove_stale_devices, is_stale_device, normalise_serial
 from .plum_device import DEVICE_MAP_PATH, PlumDevice
 from .schedule import async_register_services as async_register_schedule_service
-from .schedule import async_unregister_services as async_unregister_schedule_service
 from .snapshot import async_remove_snapshot
 from .solar_dump import async_register_services as async_register_solar_dump_service
 from .solar_dump import async_register_stop_listener as async_register_solar_dump_stop
 from .solar_dump import async_stop_for_entry as async_stop_solar_dump
-from .solar_dump import async_unregister_services as async_unregister_solar_dump_service
 from .solar_dump_auto import async_stop_auto as async_stop_solar_dump_auto
 
 _LOGGER = logging.getLogger(__name__)
@@ -80,6 +78,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     Returns:
         bool: Always True (configuration is handled via Config Flow).
     """
+    # The actions exist for as long as the integration is set up; their handlers
+    # raise a translated error when no config entry is loaded.
+    await async_register_schedule_service(hass)
+    await async_register_solar_dump_service(hass)
     return True
 
 
@@ -121,8 +123,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_remove_stale_devices(hass, entry)
-    await async_register_schedule_service(hass)
-    await async_register_solar_dump_service(hass)
     return True
 
 
@@ -164,6 +164,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> boo
         # tear it down explicitly here so a reload/removal doesn't leak an
         # open socket until garbage collection gets around to it.
         await coordinator.device.async_close()
-        await async_unregister_schedule_service(hass)
-        await async_unregister_solar_dump_service(hass)
     return unload_ok

@@ -503,5 +503,22 @@
                 }
             }
         }
+    },
+    "exceptions": {
+        "write_failed": {
+            "message": "The boiler did not confirm writing {slug}; the previous value was restored."
+        },
+        "write_rejected": {
+            "message": "The boiler rejected writing {slug} (code {code}). Check the user name and password with Reconfigure."
+        },
+        "no_entry_loaded": {
+            "message": "No Plum ecoMAX is set up or loaded."
+        },
+        "circuit_not_active": {
+            "message": "Circuit {circuit} is not an active circuit of any loaded Plum ecoMAX."
+        },
+        "schedule_not_supported": {
+            "message": "None of the loaded boilers exposes a weekly schedule for that target."
+        }
     }
 }

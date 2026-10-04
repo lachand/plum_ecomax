@@ -293,9 +293,12 @@ class PlumDevice:
         full_payload = user_bytes + pass_bytes + b"\x01" + struct.pack("<H", pid) + encoded
 
         async with self._io_lock:
+            failures_at_start = self.consecutive_failures
             for _attempt in range(1, 4):
                 if await self._write_value_once(pid, full_payload):
                     return True
+                if self._link_down_since(failures_at_start):
+                    break  # the link is dead: don't make the caller wait for more attempts
                 await asyncio.sleep(1.0)
         return False
 

@@ -130,7 +130,6 @@ class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntit
 
         # Unpack configuration from const.py
         self._unit: str | None = config[0]
-        self._icon: str | None = config[1]
         self._device_class: str | None = config[2]
 
         self._entry_id = entry.entry_id
@@ -197,11 +196,6 @@ class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntit
         return self._unit
 
     @property
-    def icon(self) -> str | None:
-        """Returns the icon."""
-        return self._icon
-
-    @property
     def device_class(self) -> SensorDeviceClass | None:
         """Returns the device class."""
         # SENSOR_TYPES stores the plain strings ("temperature", ...); a
@@ -224,6 +218,13 @@ class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntit
         if self._slug in DIAGNOSTIC_SENSOR_SLUGS:
             return EntityCategory.DIAGNOSTIC
         return None
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """The raw registers are only useful when troubleshooting: they are created
+        disabled (enable them from the entity's settings). Entities that already
+        exist keep whatever the user chose."""
+        return self._slug not in DIAGNOSTIC_SENSOR_SLUGS
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -259,7 +260,6 @@ class PlumLastCommunicationSensor(_PlumLinkHealthSensor):
 
     _attr_translation_key = "last_communication"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _attr_icon = "mdi:lan-connect"
 
     def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator, entry_id)
@@ -276,7 +276,6 @@ class PlumConsecutiveFailuresSensor(_PlumLinkHealthSensor):
 
     _attr_translation_key = "consecutive_failures"
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_icon = "mdi:lan-disconnect"
 
     def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator, entry_id)
@@ -301,7 +300,6 @@ class PlumSolarDumpRuntimeSensor(
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_state_class = SensorStateClass.TOTAL
-    _attr_icon = "mdi:timer-play-outline"
 
     def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
         super().__init__(coordinator)

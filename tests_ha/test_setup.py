@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import timedelta
 from unittest.mock import patch
 
+import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -65,7 +67,7 @@ async def test_unreachable_boiler_at_startup_retries_instead_of_loading_empty(ha
     assert er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
 
 
-async def test_unload_closes_the_link_and_removes_the_services_with_the_last_entry(hass):
+async def test_unload_closes_the_link_and_the_actions_then_report_that_nothing_is_loaded(hass):
     entry = await _setup(hass)
     assert hass.services.has_service(DOMAIN, "solar_to_buffer")
     device = FakePlumDevice.instances[-1]
@@ -75,8 +77,13 @@ async def test_unload_closes_the_link_and_removes_the_services_with_the_last_ent
 
     assert entry.state is ConfigEntryState.NOT_LOADED
     assert device.closed
-    assert not hass.services.has_service(DOMAIN, "solar_to_buffer")
-    assert not hass.services.has_service(DOMAIN, "set_schedule")
+    # The actions are registered once, in async_setup, and stay available...
+    assert hass.services.has_service(DOMAIN, "solar_to_buffer")
+    assert hass.services.has_service(DOMAIN, "set_schedule")
+    # ... but refuse to run without a loaded entry, with a translated error.
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call(DOMAIN, "solar_to_buffer", {"duration": 5}, blocking=True)
+    assert err.value.translation_key == "no_entry_loaded"
 
 
 async def test_services_survive_unloading_one_of_two_entries(hass):
@@ -200,3 +207,19 @@ async def test_unload_restores_automatic_mode_before_closing_the_link(hass):
     assert ("hdwpumpforce", 0) in device.writes
     assert closed_when_restoring and not any(closed_when_restoring)  # link still open
     assert device.closed
+
+
+async def test_raw_diagnostic_registers_are_created_disabled_but_alarms_stay_enabled(hass):
+    entry = await _setup(hass)
+    registry = er.async_get(hass)
+    by_unique_id = {
+        e.unique_id: e for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+
+    raw = by_unique_id[f"{DOMAIN}_{entry.entry_id}_workstate2"]
+    assert raw.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert hass.states.get(raw.entity_id) is None  # a disabled entity has no state
+
+    alarm = by_unique_id[f"{DOMAIN}_{entry.entry_id}_binary_sensor_alarmbits_1"]
+    assert alarm.disabled_by is None  # alarms keep feeding the repair issue
+    assert hass.states.get(alarm.entity_id) is not None

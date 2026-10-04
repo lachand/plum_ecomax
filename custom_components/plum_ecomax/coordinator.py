@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -50,6 +51,12 @@ DEFAULT_TTL = 300
 # comfort integration (not a safety-critical one) but worth being honest
 # about instead of implying near-instant detection.
 CONNECTION_LOST_THRESHOLD = 3
+
+# A write is sent up to WRITE_ATTEMPTS times, WRITE_RETRY_DELAY seconds apart (and
+# each PlumDevice.set_value() retries on its own too). The caller waits for the
+# outcome, so this is bounded to keep a failing action from hanging.
+WRITE_ATTEMPTS = 2
+WRITE_RETRY_DELAY = 2.0
 
 # coordinator.data: slug -> decoded value. The keys are the parameter slugs of
 # the device map (dynamic), so a TypedDict can't describe them.
@@ -279,20 +286,24 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
         )
 
     async def async_set_value(self, slug: str, value: Any) -> bool:
-        """Writes a value using Optimistic UI + Repeated Background Sends.
+        """Writes a value: optimistic UI, then wait for the boiler's confirmation.
 
         1. Updates the internal cache immediately so the UI is responsive.
-        2. Launches a background task to send the command (up to 5 attempts)
-           and reconcile the optimistic cache with what the device actually
-           confirmed once it answers.
+        2. Sends the command (see _perform_repeated_write) and waits for the
+           boiler's own confirmation. If it never confirms, the optimistic
+           value is reverted and the call raises, so the action that asked for
+           the write reports the failure instead of silently doing nothing.
 
         Args:
             slug: The parameter identifier.
             value: The value to write.
 
         Returns:
-            bool: Always True (Optimistic). Use the entity's later state
-            (or the logs) to learn whether the device actually confirmed it.
+            bool: True once the boiler confirmed the write.
+
+        Raises:
+            HomeAssistantError: The boiler did not confirm the write
+                ("write_failed"), or explicitly rejected it ("write_rejected").
         """
         # 1. Optimistic Cache Update (Immediate)
         async with self._cache_lock:
@@ -302,34 +313,41 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
 
         # Notify Home Assistant immediately
         self.async_set_updated_data(self._cache)
-        _LOGGER.info("Optimistic set for %s=%s. Launching background sends.", slug, value)
+        _LOGGER.info("Optimistic set for %s=%s. Sending.", slug, value)
 
-        # 2. Repeated sending on a background task tied to the config entry,
-        # so an in-flight write (up to 5 attempts x 2s) is cancelled on
-        # unload/reload instead of running on against a closed socket and
-        # calling into hass after teardown.
-        self.config_entry.async_create_background_task(
-            self.hass,
-            self._perform_repeated_write(slug, value, previous_val),
-            name=f"{DOMAIN} write {slug}",
-        )
-
+        try:
+            await self._perform_repeated_write(slug, value, previous_val)
+        except asyncio.CancelledError:
+            # The caller went away mid-write (e.g. the entry is unloading): don't
+            # leave a value the boiler may never have applied in the cache.
+            self._revert_optimistic(slug, previous_val)
+            raise
         return True
+
+    def _revert_optimistic(self, slug: str, previous_val: Any) -> None:
+        """Put back what was cached before an optimistic write, and mark the slug
+        stale so the next poll re-reads the real hardware state."""
+        if previous_val is not None:
+            self._cache[slug] = previous_val
+        else:
+            self._cache.pop(slug, None)
+        self._timestamps[slug] = 0
 
     async def _perform_repeated_write(
         self, slug: str, value: Any, previous_val: Any = None
     ) -> None:
-        """Background task to send the write command and reconcile state.
+        """Send the write command, reconcile the cache, raise if never confirmed.
 
-        Sends the command up to 5 times, 2 seconds apart, stopping as soon
-        as `device.set_value()` reports a confirmed write (the boiler's own
-        0xE5 result code, validated in plum_device._write_value_once -- not
-        just "a response arrived"). If none of the 5 attempts are
-        confirmed, the optimistic cache entry is reverted so the UI doesn't
-        keep showing a value the boiler never actually applied. Either way,
-        the slug's cache entry is marked stale so the next poll cycle
-        re-reads the real hardware state instead of trusting the optimistic
-        value for the full cache TTL.
+        Sends the command up to WRITE_ATTEMPTS times, WRITE_RETRY_DELAY seconds
+        apart (each `device.set_value()` call retries on its own too), stopping
+        as soon as it reports a confirmed write (the boiler's own 0xE5 result
+        code, validated in plum_device._write_value_once -- not just "a
+        response arrived"). If no attempt is confirmed, the optimistic cache
+        entry is reverted so the UI doesn't keep showing a value the boiler
+        never applied, a repair issue is raised when the boiler explicitly
+        rejected the write, and HomeAssistantError is raised so the calling
+        action fails visibly. Either way, the slug's cache entry is marked
+        stale so the next poll cycle re-reads the real hardware state.
 
         Args:
             slug: Parameter slug.
@@ -347,16 +365,16 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
         # not once at the end of the loop -- keeps this specific to our
         # own write.
         last_rejection_code: int | None = None
-        for i in range(1, 6):  # up to 5 attempts
-            _LOGGER.debug("Sending %s=%s (attempt %d/5)", slug, value, i)
+        for i in range(1, WRITE_ATTEMPTS + 1):
+            _LOGGER.debug("Sending %s=%s (attempt %d/%d)", slug, value, i, WRITE_ATTEMPTS)
             if await self.device.set_value(slug, value):
                 confirmed = True
                 break
             last_rejection_code = self.device.last_write_error
 
-            # Wait 2 seconds between sends, but not after the last one
-            if i < 5:
-                await asyncio.sleep(2.0)
+            # Wait between sends, but not after the last one
+            if i < WRITE_ATTEMPTS:
+                await asyncio.sleep(WRITE_RETRY_DELAY)
 
         async with self._cache_lock:
             if confirmed:
@@ -365,17 +383,14 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
                 self._timestamps[slug] = 0
             else:
                 _LOGGER.warning(
-                    "Write %s=%s was never confirmed by the device after 5 attempts; "
+                    "Write %s=%s was never confirmed by the device after %d attempts; "
                     "reverting optimistic state to %s.",
                     slug,
                     value,
+                    WRITE_ATTEMPTS,
                     previous_val,
                 )
-                if previous_val is not None:
-                    self._cache[slug] = previous_val
-                else:
-                    self._cache.pop(slug, None)
-                self._timestamps[slug] = 0
+                self._revert_optimistic(slug, previous_val)
 
         issue_id = f"write_rejected_{self.entry_id}_{slug}"
         if confirmed:
@@ -395,6 +410,19 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
             )
 
         self.async_set_updated_data(self._cache)
+
+        if not confirmed:
+            if last_rejection_code is not None:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="write_rejected",
+                    translation_placeholders={"slug": slug, "code": f"0x{last_rejection_code:02X}"},
+                )
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="write_failed",
+                translation_placeholders={"slug": slug},
+            )
 
     async def _detect_available_parameters(self) -> None:
         """Initial scan to filter out unsupported parameters."""

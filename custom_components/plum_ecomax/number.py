@@ -135,7 +135,6 @@ class PlumEcomaxNumber(CoordinatorEntity[PlumDataUpdateCoordinator], NumberEntit
         self._min_val = config[0]
         self._max_val = config[1]
         self._step_val = config[2]
-        self._icon_val = config[3]
 
         self._entry_id = entry.entry_id
         self._attr_translation_key = slug
@@ -195,11 +194,6 @@ class PlumEcomaxNumber(CoordinatorEntity[PlumDataUpdateCoordinator], NumberEntit
         """Returns the step increment."""
         return self._step_val
 
-    @property
-    def icon(self) -> str:
-        """Returns the icon for the entity."""
-        return self._icon_val
-
     async def async_set_native_value(self, value: float) -> None:
         """Sets a new value for the entity.
 
@@ -231,14 +225,13 @@ class PlumSolarDumpNumber(RestoreNumber):
     _attr_mode = NumberMode.BOX
 
     def __init__(self, coordinator: PlumDataUpdateCoordinator, entry: PlumConfigEntry, key: str):
-        default, minv, maxv, step, unit, icon, coord_attr = SOLAR_DUMP_NUMBERS[key]
+        default, minv, maxv, step, unit, _icon, coord_attr = SOLAR_DUMP_NUMBERS[key]
         self._coordinator = coordinator
         self._entry_id = entry.entry_id
         self._key = key
         self._coord_attr = coord_attr
         self._attr_translation_key = f"solar_dump_{key}"
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_number_solar_dump_{key}"
-        self._attr_icon = icon
         self._attr_native_unit_of_measurement = _SOLAR_DUMP_UNITS[unit]
         self._attr_native_min_value = minv
         self._attr_native_max_value = maxv
