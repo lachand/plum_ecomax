@@ -5,7 +5,7 @@
 # OptionsFlow.config_entry as a read-only property (2024.11+), and
 # ConfigEntry.async_create_background_task. 2025.2.0 is the first
 # Python-3.13 release, matching the lowest CI matrix entry.
-homeassistant>=2025.2.0
+homeassistant>=2026.9.4
 pytest~=9.1
 pytest-asyncio~=1.4
 mypy>=1.13
