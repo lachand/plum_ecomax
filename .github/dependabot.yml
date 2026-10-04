@@ -13,8 +13,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: "deps"
+    # "homeassistant" is deliberately not listed: requirements_test.txt pins a
+    # *floor* (the oldest supported release) and the CI Python matrix already
+    # resolves the newest HA per Python version. Bumping the floor to a release
+    # that needs Python >=3.14 would drop the 3.13 job.
     allow:
-      - dependency-name: "homeassistant"
       - dependency-name: "pytest"
       - dependency-name: "pytest-asyncio"
       - dependency-name: "mkdocs*"

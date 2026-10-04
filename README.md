@@ -104,6 +104,10 @@ Any of these can be changed later via **Reconfigure** on the integration card, w
 
 Unit and regression tests live in `tests/` (`pytest tests/`). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 0.8.2
+
+No functional change: only repository tooling (Dependabot no longer proposes raising the minimum Home Assistant version, which would have dropped Python 3.13). The faulty `v0.8.0` tag was removed; 0.8.1 remains the fix for the Python 3.13 import error.
+
 ### Upgrading to 0.8.1
 
 Fixes an import error on **Python 3.13** introduced in 0.8.0 (the integration failed to load there); no other change. If you installed 0.8.0, update straight to 0.8.1 — 0.8.0 should be skipped. Restart Home Assistant after updating.
