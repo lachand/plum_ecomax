@@ -32,11 +32,16 @@ def _enable_custom_integrations(enable_custom_integrations):
 
 
 @pytest.fixture(autouse=True)
-def fake_device():
-    """Route both the entry setup and the config-flow probe to FakePlumDevice."""
+def fake_device(request):
+    """Route both the entry setup and the config-flow probe to FakePlumDevice
+    (except for tests marked `live`, which talk to the real boiler)."""
     from unittest.mock import patch
 
     from tests_ha.fakes import FakePlumDevice
+
+    if request.node.get_closest_marker("live"):
+        yield FakePlumDevice
+        return
 
     FakePlumDevice.reset()
     with (

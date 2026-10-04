@@ -44,6 +44,7 @@ exclude = ["tools/"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+markers = ["live: runs against the real boiler (tests_ha, opt-in via PLUM_LIVE_IP)"]
 filterwarnings = [
     "ignore::DeprecationWarning:backoff.*",
     "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning",
