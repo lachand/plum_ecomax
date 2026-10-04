@@ -9,6 +9,7 @@ site/
 # Session working notes -- not meant to be published (contains IP/investigation
 # details), kept locally only from here on.
 IMPROVEMENT_PLAN.md
+IMPROVEMENT_PLAN_ARCHIVE.md
 
 # Raw capture/scan output (data dumps, not source) -- the scripts that
 # produce these live in tools/ and stay tracked.
