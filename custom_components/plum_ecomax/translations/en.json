@@ -12,6 +12,18 @@
                     "active_circuits": "Active Heating Circuits",
                     "update_interval": "Polling interval (seconds)"
                 }
+            },
+            "reconfigure": {
+                "title": "Reconfigure Plum EcoMAX",
+                "description": "Change the EcoNet connection details.",
+                "data": {
+                    "ip_address": "IP Address",
+                    "port": "Port",
+                    "username": "Username",
+                    "password": "Password",
+                    "active_circuits": "Active Heating Circuits",
+                    "update_interval": "Polling interval (seconds)"
+                }
             }
         },
         "error": {
@@ -20,7 +32,9 @@
             "invalid_auth": "Invalid authentication"
         },
         "abort": {
-            "already_configured": "Device is already configured"
+            "already_configured": "Device is already configured",
+            "reconfigure_successful": "Settings updated.",
+            "unique_id_mismatch": "The boiler at this address is not the one this entry was set up for."
         }
     },
     "options": {

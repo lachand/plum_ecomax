@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 
+from .config_flow import SERIAL_SLUG, _normalise_serial
 from .const import CONF_UPDATE_INTERVAL, DEFAULT_PORT, DOMAIN, UPDATE_INTERVAL
 from .coordinator import PlumDataUpdateCoordinator
 from .plum_device import PlumDevice
@@ -43,6 +44,26 @@ PLATFORMS = [
 # Devices & Services -> Add Integration), never from configuration.yaml --
 # tells hassfest/HA there's deliberately no YAML schema to validate.
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+def _adopt_serial_unique_id(
+    hass: HomeAssistant, entry: PlumConfigEntry, coordinator: PlumDataUpdateCoordinator
+) -> None:
+    """Move an IP-keyed entry's unique_id to the boiler's serial number.
+
+    Entries created before the serial-based unique_id existed use the IP,
+    which changes with DHCP. Done here, once the first refresh has read
+    "uid", rather than in a migration step: a migration runs before the boiler
+    is reachable and must not depend on it. Entity unique_ids are scoped by
+    entry_id, not by this value, so nothing else is renamed.
+    """
+    serial = _normalise_serial(coordinator.data.get(SERIAL_SLUG))
+    if not serial or entry.unique_id == serial:
+        return
+    if any(e.unique_id == serial for e in hass.config_entries.async_entries(DOMAIN)):
+        _LOGGER.debug("Serial %s already used by another entry, keeping unique_id", serial)
+        return
+    hass.config_entries.async_update_entry(entry, unique_id=serial)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -92,6 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry):
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+    _adopt_serial_unique_id(hass, entry, coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_register_schedule_service(hass)

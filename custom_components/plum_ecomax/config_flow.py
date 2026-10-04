@@ -6,6 +6,7 @@ port, password, and active heating circuits.
 """
 
 import asyncio
+import contextlib
 import logging
 
 import voluptuous as vol
@@ -39,6 +40,8 @@ _LOGGER = logging.getLogger(__name__)
 # real ecoNET conversation (connect + framed request/response + CRC) works,
 # not just that something is listening on the TCP port.
 _PROBE_SLUG = "hdwstate"
+# Factory serial number: the entry's unique_id when readable (an IP can change).
+SERIAL_SLUG = "uid"
 
 
 def _build_data_schema(defaults: dict) -> vol.Schema:
@@ -72,15 +75,29 @@ def _build_data_schema(defaults: dict) -> vol.Schema:
     )
 
 
-async def _validate_connection(hass, user_input: dict) -> str | None:
+def _normalise_serial(raw) -> str | None:
+    """Boiler serial number as a stable string, or None if unreadable."""
+    if isinstance(raw, (bytes, bytearray)):
+        raw = bytes(raw).split(b"\x00")[0].decode("ascii", errors="ignore")
+    if raw is None:
+        return None
+    serial = str(raw).strip()
+    return serial or None
+
+
+async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]:
     """Tries an actual protocol-level read against the boiler.
 
-    This proves the IP/port/credentials really reach an ecoNET module --
-    not just that a TCP port happens to be open -- by loading the bundled
-    parameter map and reading one well-known parameter.
+    This proves the IP/port really reach an ecoNET module -- not just that a
+    TCP port happens to be open -- by loading the bundled parameter map and
+    reading one well-known parameter. The credentials are NOT proven here:
+    reads never send them, only writes do (the boiler answers 0x7D to a bad
+    password on a write), so a bad password can't be detected without
+    writing something to the boiler.
 
     Returns:
-        str | None: An error code to show on the form, or None on success.
+        tuple: (error code to show on the form or None on success,
+        the boiler's serial number if it could be read, else None).
     """
     json_path = hass.config.path(f"custom_components/{DOMAIN}/device_map_ecomax360i.json")
     device = PlumDevice(
@@ -95,13 +112,19 @@ async def _validate_connection(hass, user_input: dict) -> str | None:
         await asyncio.to_thread(device.load_map)
     except Exception as err:
         _LOGGER.error("Could not load parameter map %s: %s", json_path, err)
-        return "cannot_load_map"
+        return "cannot_load_map", None
 
+    serial = None
     try:
         value = await device.get_value(_PROBE_SLUG, retries=2)
+        if value is not None:
+            # Best effort: a boiler that doesn't answer for "uid" is still
+            # usable, the entry then falls back to an IP-based unique_id.
+            with contextlib.suppress(Exception):
+                serial = _normalise_serial(await device.get_value(SERIAL_SLUG, retries=2))
     except Exception as err:
         _LOGGER.debug("Connection test failed for %s: %s", user_input[CONF_IP_ADDRESS], err)
-        return "cannot_connect"
+        return "cannot_connect", None
     finally:
         # This PlumDevice is a one-shot probe, never stored anywhere. Its
         # connection is now persistent (kept open on success) rather than
@@ -110,7 +133,15 @@ async def _validate_connection(hass, user_input: dict) -> str | None:
         # collection gets around to the object.
         await asyncio.to_thread(device.close)
 
-    return None if value is not None else "cannot_connect"
+    if value is None:
+        return "cannot_connect", None
+    return None, serial
+
+
+async def _validate_connection(hass, user_input: dict) -> str | None:
+    """Error code from _probe_boiler(), or None on success."""
+    error, _serial = await _probe_boiler(hass, user_input)
+    return error
 
 
 class PlumConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -138,11 +169,18 @@ class PlumConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         errors = {}
         if user_input is not None:
-            error = await _validate_connection(self.hass, user_input)
+            error, serial = await _probe_boiler(self.hass, user_input)
             if error:
                 errors["base"] = error
             else:
-                await self.async_set_unique_id(user_input[CONF_IP_ADDRESS])
+                # Entries created before the serial-number unique_id existed
+                # are keyed by IP -- treat the same IP as already configured.
+                if any(
+                    e.data.get(CONF_IP_ADDRESS) == user_input[CONF_IP_ADDRESS]
+                    for e in self._async_current_entries()
+                ):
+                    return self.async_abort(reason="already_configured")
+                await self.async_set_unique_id(serial or user_input[CONF_IP_ADDRESS])
                 self._abort_if_unique_id_configured()
                 title = f"Boiler ({user_input[CONF_IP_ADDRESS]})"
                 return self.async_create_entry(title=title, data=user_input)
@@ -150,6 +188,42 @@ class PlumConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=_build_data_schema(user_input or {}),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Change IP/port/credentials of an existing entry in place.
+
+        The boiler behind the new address must be the same one: its serial
+        number has to match the entry's unique_id (when that is serial-based).
+        """
+        entry = self._get_reconfigure_entry()
+        errors = {}
+        if user_input is not None:
+            error, serial = await _probe_boiler(self.hass, user_input)
+            if error:
+                errors["base"] = error
+            else:
+                if (
+                    serial
+                    and entry.unique_id
+                    and entry.unique_id
+                    not in (
+                        serial,
+                        entry.data.get(CONF_IP_ADDRESS),
+                    )
+                ):
+                    return self.async_abort(reason="unique_id_mismatch")
+                return self.async_update_reload_and_abort(
+                    entry,
+                    unique_id=serial or entry.unique_id,
+                    title=f"Boiler ({user_input[CONF_IP_ADDRESS]})",
+                    data=user_input,
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=_build_data_schema(user_input or entry.data),
             errors=errors,
         )
 

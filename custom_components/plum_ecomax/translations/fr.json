@@ -12,6 +12,18 @@
                     "active_circuits": "Circuits de chauffage actifs",
                     "update_interval": "Intervalle de sondage (secondes)"
                 }
+            },
+            "reconfigure": {
+                "title": "Reconfigurer Plum EcoMAX",
+                "description": "Modifiez les informations de connexion au module EcoNet.",
+                "data": {
+                    "ip_address": "Adresse IP",
+                    "port": "Port",
+                    "username": "Nom d'utilisateur",
+                    "password": "Mot de passe",
+                    "active_circuits": "Circuits de chauffage actifs",
+                    "update_interval": "Intervalle de sondage (secondes)"
+                }
             }
         },
         "error": {
@@ -20,7 +32,9 @@
             "invalid_auth": "Authentification invalide"
         },
         "abort": {
-            "already_configured": "L'appareil est déjà configuré"
+            "already_configured": "L'appareil est déjà configuré",
+            "reconfigure_successful": "Paramètres mis à jour.",
+            "unique_id_mismatch": "La chaudière à cette adresse n'est pas celle pour laquelle cette entrée a été configurée."
         }
     },
     "options": {
