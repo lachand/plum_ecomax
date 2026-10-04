@@ -17,7 +17,7 @@ import logging
 import struct
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple, NotRequired, TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,32 @@ DEFAULT_BATCH_SIZE = 16
 CONNECT_TIMEOUT = 5.0
 
 
+class ParamDef(TypedDict):
+    """One entry of the bundled parameter map (device_map_ecomax360i.json).
+
+    Typing only: the JSON is loaded as-is, nothing is converted at runtime.
+    """
+
+    id: int
+    type: str  # BYTE / SHORT_INT / WORD / INT / DWORD / LONG_INT / FLOAT / RAW
+    exponent: int
+    unit: str
+    name_orig: str
+    # Plausibility bounds / rate limit, only on the parameters that need them
+    # (see PlumDataUpdateCoordinator._validate_value) and enum labels.
+    min: NotRequired[int | float]
+    max: NotRequired[int | float]
+    max_delta: NotRequired[int | float]
+    enum: NotRequired[list]
+
+
+class Frame(NamedTuple):
+    """A structurally valid response frame: command byte and its data field."""
+
+    func: int
+    payload: bytes
+
+
 # Bundled parameter map, resolved from this file rather than from the HA config dir.
 DEVICE_MAP_PATH = Path(__file__).parent / "device_map_ecomax360i.json"
 
@@ -75,7 +101,7 @@ class PlumDevice:
         self.password = password
         self.user = user
         self.map_file = map_file
-        self.params_map: dict[str, Any] = {}
+        self.params_map: dict[str, ParamDef] = {}
         self.session_id = 10
         self._data_cache = {}
         # Serializes all transactions so a background write and a
@@ -120,7 +146,7 @@ class PlumDevice:
             raise
 
     # --- ENCODING / DECODING ---
-    def _encode(self, value: Any, param_def: dict) -> bytes:
+    def _encode(self, value: Any, param_def: ParamDef) -> bytes | None:
         """Encodes a Python value into raw bytes based on the parameter definition.
 
         Args:
@@ -161,7 +187,7 @@ class PlumDevice:
         except (ValueError, TypeError, OverflowError, struct.error):
             return None
 
-    def _decode(self, data: bytes, param_def: dict) -> Any:
+    def _decode(self, data: bytes, param_def: ParamDef) -> Any:
         """Decodes raw bytes into a Python value.
 
         Args:
@@ -337,7 +363,7 @@ class PlumDevice:
         return False
 
     # --- TRANSACTION WORKERS ---
-    async def _read_value_once(self, pid: int, param: dict) -> Any:
+    async def _read_value_once(self, pid: int, param: ParamDef) -> Any:
         """Fetches a single value in one transaction (no retry)."""
         self.session_id = (self.session_id + 1) % 65000
         payload = struct.pack("<HB BH", self.session_id, 1, 1, pid)
@@ -405,7 +431,7 @@ class PlumDevice:
         self.last_write_error = None
         return True
 
-    async def _read_values_batch(self, items: list) -> dict[int, Any]:
+    async def _read_values_batch(self, items: list[tuple[int, ParamDef]]) -> dict[int, Any]:
         """Fetches several values in a single frame.
 
         Builds one block per requested pid (spec 1.5.3.12), each holding
@@ -542,7 +568,7 @@ class PlumDevice:
             except (OSError, TimeoutError):
                 pass
 
-    async def _transaction(self, frame: bytes, timeout: float = 2.0) -> tuple | None:
+    async def _transaction(self, frame: bytes, timeout: float = 2.0) -> Frame | None:
         """Executes one request/response transaction over a persistent
         connection, reusing it across calls instead of reconnecting for
         every single transaction (a full TCP handshake per read/write adds
@@ -578,8 +604,8 @@ class PlumDevice:
             timeout: Time budget for sending and receiving, in seconds.
 
         Returns:
-            Optional[tuple[int, bytes]]: (func, payload) of the first
-            structurally valid response frame, or None on timeout/error.
+            Frame | None: the first structurally valid response frame, or
+            None on timeout/error.
         """
         for attempt in (1, 2):
             try:
@@ -623,7 +649,7 @@ class PlumDevice:
             return result
         return None
 
-    async def _read_response(self, reader: asyncio.StreamReader) -> tuple:
+    async def _read_response(self, reader: asyncio.StreamReader) -> Frame:
         """Reads until a structurally valid frame is found.
 
         Has no deadline of its own: the caller wraps it in asyncio.timeout(),
@@ -633,7 +659,7 @@ class PlumDevice:
             reader: The connected stream to read from.
 
         Returns:
-            tuple[int, bytes]: (func, payload) of the first valid frame.
+            Frame: the first valid frame.
 
         Raises:
             OSError: If the peer closes the connection (read() returns no
@@ -652,7 +678,7 @@ class PlumDevice:
             if result is not None:
                 return result
 
-    def _extract_valid_frame(self, buffer: bytearray) -> tuple | None:
+    def _extract_valid_frame(self, buffer: bytearray) -> Frame | None:
         """Scans a buffer for the first structurally valid response frame.
 
         Rejects candidates with an inconsistent length, a bad CRC, a wrong
@@ -663,8 +689,8 @@ class PlumDevice:
             buffer: The accumulated bytes read from the connection so far.
 
         Returns:
-            Optional[tuple[int, bytes]]: (func, payload), or None if no
-            complete valid frame is present yet (more data may still arrive).
+            Frame | None: the frame, or None if no complete valid frame is
+            present yet (more data may still arrive).
         """
         i = 0
         while i < len(buffer):
@@ -696,6 +722,6 @@ class PlumDevice:
                 i += frame_len
                 continue
 
-            return candidate[7], candidate[8:-3]  # (func, payload)
+            return Frame(candidate[7], candidate[8:-3])
 
         return None

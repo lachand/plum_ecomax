@@ -73,6 +73,10 @@ CONNECTION_LOST_THRESHOLD = 3
 # noise on the same parameter.
 MAX_DELTA_REJECTIONS = 3
 
+# coordinator.data: slug -> decoded value. The keys are the parameter slugs of
+# the device map (dynamic), so a TypedDict can't describe them.
+PlumData = dict[str, Any]
+
 # Definitions of physical limits for validation
 VALIDATION_RANGES = {
     "temp": (-20, 100.0),
@@ -84,7 +88,7 @@ VALIDATION_RANGES = {
 }
 
 
-class PlumDataUpdateCoordinator(DataUpdateCoordinator):
+class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
     """Centralized data management with Robust Data Validation.
 
     Implements caching, write-through strategies, and data sanitization
@@ -153,7 +157,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=update_interval),
         )
 
-    async def _async_update_data(self) -> dict[str, Any]:
+    async def _async_update_data(self) -> PlumData:
         """Main update loop with Validation and Fallback.
 
         Returns:

@@ -690,3 +690,15 @@ class TestAsyncTimeouts:
         assert await device._transaction(b"frame") is None
         assert attempts["n"] == 2
         assert device.consecutive_failures == 2
+
+
+class TestFrameType:
+    def test_extracted_frame_is_a_named_frame_and_still_unpacks_as_a_tuple(self):
+        device = _make_device()
+
+        frame = device._extract_valid_frame(bytearray(SPEC_READ_RESPONSE))
+
+        assert isinstance(frame, plum_device_module.Frame)
+        func, payload = frame  # existing call sites unpack it this way
+        assert (func, payload) == (frame.func, frame.payload)
+        assert func == CMD_READ_RESP
