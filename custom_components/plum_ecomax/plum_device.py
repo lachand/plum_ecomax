@@ -11,6 +11,7 @@ import json
 import logging
 import struct
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from .protocol import (
     CMD_READ_VAL,
     CMD_WRITE_FORCE,
     CMD_WRITE_RESP,
+    START_BYTE,
     VALUE_BYTE_LEN,
     WRITE_RESULT_OK,
     Frame,
@@ -26,12 +28,19 @@ from .protocol import (
     build_frame,
     decode_value,
     encode_value,
-    extract_valid_frame,
+    pop_valid_frame,
 )
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 16
+
+# Upper bound on the bytes kept while waiting for the expected response: the
+# module streams unsolicited frames on the same connection, so a never-matching
+# stream must not grow the buffer without limit.
+MAX_RESPONSE_BUFFER = 64 * 1024
+# Bytes kept when trimming: more than the largest frame (l_val <= 4096).
+_KEEP_TAIL = 8192
 
 # Failed transactions (connect error / timeout, not an invalid answer) within one
 # get_values() cycle after which the link is considered down and the remaining
@@ -41,6 +50,11 @@ LINK_DOWN_FAILURES = 4
 
 # Seconds allowed to open the TCP connection to the module.
 CONNECT_TIMEOUT = 5.0
+# Time budget for an answer. Measured on a real boiler: answered requests take
+# ~40 ms (max ~0.5 s over 200 requests) and a request that isn't answered at all
+# is never answered later, so waiting several seconds only delays the retry.
+READ_TIMEOUT = 1.5
+BATCH_TIMEOUT = 2.0
 
 
 # Bundled parameter map, resolved from this file rather than from the HA config dir.
@@ -204,7 +218,11 @@ class PlumDevice:
                         if slug:
                             results[slug] = val
                             self._data_cache[slug] = val
-                    if len(values) >= len(chunk):
+                    if values:
+                        # A valid but short answer (the module stops at a pid it
+                        # doesn't know) won't change on a retry: callers re-probe
+                        # the missing ones individually. Only an empty result
+                        # (no answer at all) is worth another attempt.
                         break
                     if self._link_down_since(failures_at_start):
                         break  # no point retrying a dead link; the loop above returns
@@ -281,7 +299,9 @@ class PlumDevice:
         self.session_id = (self.session_id + 1) % 65000
         payload = struct.pack("<HB BH", self.session_id, 1, 1, pid)
         frame = build_frame(CMD_READ_VAL, payload)
-        result = await self._transaction(frame)
+        result = await self._transaction(
+            frame, timeout=READ_TIMEOUT, accept=self._read_answer_to(self.session_id)
+        )
         if result is None:
             return None
 
@@ -311,7 +331,9 @@ class PlumDevice:
         """Writes a value in one transaction (no retry)."""
         self.session_id = (self.session_id + 1) % 65000
         frame = build_frame(CMD_WRITE_FORCE, payload)
-        result = await self._transaction(frame)
+        # The write acknowledgement carries no session id, so only its command
+        # byte can be matched.
+        result = await self._transaction(frame, accept=lambda f: f.func == CMD_WRITE_RESP)
         if result is None:
             return False
 
@@ -368,7 +390,9 @@ class PlumDevice:
         blocks = b"".join(struct.pack("<BH", 1, pid) for pid, _ in items)
         frame = build_frame(CMD_READ_VAL, header + blocks)
 
-        result = await self._transaction(frame, timeout=3.0)
+        result = await self._transaction(
+            frame, timeout=BATCH_TIMEOUT, accept=self._read_answer_to(self.session_id)
+        )
         if result is None:
             return {}
 
@@ -419,6 +443,17 @@ class PlumDevice:
 
         return values
 
+    @staticmethod
+    def _read_answer_to(session_id: int) -> Callable[[Frame], bool]:
+        """Accept only the answer to the read request that carried `session_id`.
+
+        The module interleaves unsolicited frames (func 0xC0) and duplicates of
+        its previous answers with the real response: matching the command and
+        the echoed session id picks the right one out of the stream.
+        """
+        session = struct.pack("<H", session_id)
+        return lambda frame: frame.func == CMD_READ_RESP and frame.payload[:2] == session
+
     async def _ensure_connection(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         """Returns the persistent connection, opening a fresh one if needed."""
         if self._reader is None or self._writer is None:
@@ -459,33 +494,36 @@ class PlumDevice:
             except (OSError, TimeoutError):
                 pass
 
-    async def _transaction(self, frame: bytes, timeout: float = 2.0) -> Frame | None:
+    async def _transaction(
+        self,
+        frame: bytes,
+        timeout: float = 2.0,
+        accept: Callable[[Frame], bool] | None = None,
+    ) -> Frame | None:
         """Executes one request/response transaction over a persistent
         connection, reusing it across calls instead of reconnecting for
         every single transaction (a full TCP handshake per read/write adds
         real overhead when polling every few seconds).
 
-        Any anomaly closes the connection so the *next* transaction starts
-        clean rather than risking a desynced stream: a hard socket error
-        (dead/reset connection) retries once against a freshly reconnected
-        connection within this same call, since that's the case most likely
-        to just be a transient drop (e.g. the boiler closed our idle
-        connection) rather than the boiler being genuinely unreachable. A
-        plain timeout (nothing invalid, just no data in time) closes the
-        connection too but does NOT retry inline -- callers already retry
-        with backoff (get_value/get_values/set_value), and immediately
-        doubling the wait on a possibly-slow-but-alive boiler isn't
-        obviously better than letting that existing retry loop handle it.
+        A hard socket error (dead/reset connection) closes the connection and
+        retries once against a freshly reconnected one within this same call,
+        since that's the case most likely to just be a transient drop (e.g.
+        the boiler closed our idle connection) rather than the boiler being
+        genuinely unreachable. A plain timeout (no matching answer in time)
+        does NOT retry inline -- callers already retry with backoff
+        (get_value/get_values/set_value) -- and keeps the connection the first
+        time: late answers are skipped by session id, so it isn't desynced,
+        and reconnecting costs about a second. A second consecutive failure
+        closes it.
 
-        Known limitation: _read_response's buffer is local to one call, so
-        any bytes received past the first valid frame in the same read
-        are discarded rather than carried over to the next transaction.
-        Not implemented, because it isn't expected to matter here: this is
-        a strict request/response protocol (the boiler only answers what we
-        just asked), so a read spanning more than the current response
-        would only happen for a stale/duplicate frame -- exactly the desync
-        case this method already handles by closing and letting the caller
-        retry, not silently misreading data.
+        The module streams unsolicited frames (func 0xC0, in bursts) and
+        duplicates of its own answers on the same connection. `accept` picks
+        the expected response out of that stream: frames it rejects are
+        skipped instead of being taken for a desync, so they no longer force a
+        reconnection (which costs about a second on this module). Bytes read
+        past the accepted frame are dropped with the call-local buffer; a
+        duplicate arriving later is skipped by the next transaction's `accept`
+        (same command but an older session id).
 
         The whole transaction is bounded by asyncio.timeout(), so a stalled
         peer can never hold the event loop's I/O lock open indefinitely.
@@ -493,10 +531,12 @@ class PlumDevice:
         Args:
             frame: The binary frame to send.
             timeout: Time budget for sending and receiving, in seconds.
+            accept: Predicate selecting the response among the received
+                frames; defaults to accepting the first valid frame.
 
         Returns:
-            Frame | None: the first structurally valid response frame, or
-            None on timeout/error.
+            Frame | None: the accepted response frame, or None on
+            timeout/error.
         """
         for attempt in (1, 2):
             try:
@@ -513,7 +553,7 @@ class PlumDevice:
                 async with asyncio.timeout(timeout):
                     writer.write(frame)
                     await writer.drain()
-                    result = await self._read_response(reader)
+                    result = await self._read_response(reader, accept)
             except asyncio.CancelledError:
                 # Cancelled mid-exchange (e.g. an integration unload): the
                 # boiler's answer may still arrive and would be misread as
@@ -521,11 +561,15 @@ class PlumDevice:
                 self._close_connection()
                 raise
             except TimeoutError:
-                # No valid frame in time -- don't trust this connection for
-                # the next transaction, but don't retry inline either (see
-                # docstring).
-                self._close_connection()
+                # No answer in time. A late answer can't be mistaken for the
+                # next one (accept() matches the session id), so the stream is
+                # not desynced and the connection is kept: reconnecting costs
+                # about a second on this module. A second consecutive failure
+                # means the connection itself is suspect (half-open): drop it.
+                # No inline retry either (see docstring).
                 self.consecutive_failures += 1
+                if self.consecutive_failures >= 2:
+                    self._close_connection()
                 return None
             except OSError as e:
                 logger.debug("Transaction failed (attempt %d/2): %s", attempt, e)
@@ -540,17 +584,25 @@ class PlumDevice:
             return result
         return None
 
-    async def _read_response(self, reader: asyncio.StreamReader) -> Frame:
-        """Reads until a structurally valid frame is found.
+    async def _read_response(
+        self,
+        reader: asyncio.StreamReader,
+        accept: Callable[[Frame], bool] | None = None,
+    ) -> Frame:
+        """Reads until a valid frame that `accept` selects arrives.
 
         Has no deadline of its own: the caller wraps it in asyncio.timeout(),
-        which cancels the pending read when the budget runs out.
+        which cancels the pending read when the budget runs out. Valid frames
+        that `accept` rejects (unsolicited broadcasts, stale duplicates) are
+        discarded and the read goes on.
 
         Args:
             reader: The connected stream to read from.
+            accept: Predicate for the wanted frame; None accepts the first
+                valid frame.
 
         Returns:
-            Frame: the first valid frame.
+            Frame: the first accepted frame.
 
         Raises:
             OSError: If the peer closes the connection (read() returns no
@@ -559,12 +611,21 @@ class PlumDevice:
                 as any other connection error.
         """
         buffer = bytearray()
+        skipped = 0
         while True:
             chunk = await reader.read(1024)
             if not chunk:
                 raise OSError("Connection closed by peer")
             buffer.extend(chunk)
 
-            result = extract_valid_frame(buffer)
-            if result is not None:
-                return result
+            while (frame := pop_valid_frame(buffer)) is not None:
+                if accept is None or accept(frame):
+                    if skipped:
+                        logger.debug("Skipped %d unrelated frame(s) before the response", skipped)
+                    return frame
+                skipped += 1
+
+            if START_BYTE not in buffer:
+                buffer.clear()  # no frame can start in what's left
+            elif len(buffer) > MAX_RESPONSE_BUFFER:
+                del buffer[:-_KEEP_TAIL]  # only noise: keep the tail

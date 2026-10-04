@@ -21,6 +21,7 @@ from custom_components.plum_ecomax.protocol import (
     decode_value,
     encode_value,
     extract_valid_frame,
+    pop_valid_frame,
 )
 from tests.unit.wire_fixtures import SPEC_READ_RESPONSE, SPEC_WRITE_OK_RESPONSE
 
@@ -174,3 +175,36 @@ class TestBuildFrame:
         assert struct.unpack("<H", frame[1:3])[0] == 5 + 3  # l_val = 5 + len(payload)
         assert frame[5:7] == struct.pack("<H", SOURCE_ID)
         assert frame[3:5] == struct.pack("<H", DEST_ID)
+
+
+class TestPopValidFrame:
+    def test_consumes_exactly_one_frame_and_leaves_the_rest(self):
+        buffer = bytearray(SPEC_READ_RESPONSE + SPEC_WRITE_OK_RESPONSE)
+
+        first = pop_valid_frame(buffer)
+        assert first.func == CMD_READ_RESP
+        assert bytes(buffer) == SPEC_WRITE_OK_RESPONSE
+
+        second = pop_valid_frame(buffer)
+        assert second.func == CMD_WRITE_RESP
+        assert not buffer
+        assert pop_valid_frame(buffer) is None
+
+    def test_drops_noise_before_the_frame(self):
+        buffer = bytearray(b"\x00\x01\x68\x02" + SPEC_WRITE_OK_RESPONSE)
+
+        assert pop_valid_frame(buffer).func == CMD_WRITE_RESP
+        assert not buffer
+
+    def test_keeps_an_incomplete_tail_for_the_next_read(self):
+        partial = SPEC_READ_RESPONSE[:10]
+        buffer = bytearray(SPEC_WRITE_OK_RESPONSE + partial)
+
+        assert pop_valid_frame(buffer).func == CMD_WRITE_RESP
+        assert pop_valid_frame(buffer) is None
+        assert bytes(buffer) == partial  # untouched, waiting for more bytes
+
+    def test_extract_valid_frame_does_not_consume(self):
+        buffer = bytearray(SPEC_READ_RESPONSE)
+        assert extract_valid_frame(buffer) is not None
+        assert bytes(buffer) == SPEC_READ_RESPONSE

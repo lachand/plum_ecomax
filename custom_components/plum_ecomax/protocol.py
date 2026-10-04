@@ -89,7 +89,7 @@ def crc16(data: bytes) -> int:
     return crc
 
 
-def extract_valid_frame(buffer: bytearray) -> Frame | None:
+def _scan_frame(buffer: bytearray) -> tuple[Frame, int] | None:
     """Scans a buffer for the first structurally valid response frame.
 
     Rejects candidates with an inconsistent length, a bad CRC, a wrong
@@ -100,8 +100,9 @@ def extract_valid_frame(buffer: bytearray) -> Frame | None:
         buffer: The accumulated bytes read from the connection so far.
 
     Returns:
-        Frame | None: the frame, or None if no complete valid frame is
-        present yet (more data may still arrive).
+        tuple[Frame, int] | None: the frame and the index just past it, or
+        None if no complete valid frame is present yet (more data may still
+        arrive).
     """
     i = 0
     while i < len(buffer):
@@ -133,9 +134,34 @@ def extract_valid_frame(buffer: bytearray) -> Frame | None:
             i += frame_len
             continue
 
-        return Frame(candidate[7], candidate[8:-3])
+        return Frame(candidate[7], candidate[8:-3]), i + frame_len
 
     return None
+
+
+def extract_valid_frame(buffer: bytearray) -> Frame | None:
+    """The first structurally valid response frame in `buffer`, or None.
+
+    Leaves the buffer untouched; see pop_valid_frame() to consume it.
+    """
+    found = _scan_frame(buffer)
+    return found[0] if found else None
+
+
+def pop_valid_frame(buffer: bytearray) -> Frame | None:
+    """Like extract_valid_frame(), but removes the frame -- and any noise before
+    it -- from the buffer, so several frames in one buffer can be read in turn.
+
+    The module sends unsolicited frames and duplicates of its answers on the
+    same connection, so a caller waiting for one specific response has to step
+    over frames that aren't it.
+    """
+    found = _scan_frame(buffer)
+    if found is None:
+        return None
+    frame, end = found
+    del buffer[:end]
+    return frame
 
 
 def encode_value(value: Any, param_def: ParamDef) -> bytes | None:
