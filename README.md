@@ -104,6 +104,10 @@ Any of these can be changed later via **Reconfigure** on the integration card, w
 
 Unit and regression tests live in `tests/` (`pytest tests/`). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 0.6.0
+
+Robustness release, no new entities. **Behaviour changes:** when the boiler is unreachable, entities now go *unavailable* (previously they kept showing the last cached value) and the outage is logged once instead of every cycle; if the boiler is unreachable at startup, the integration retries instead of loading empty. Config entries are now keyed by the boiler's **serial number** instead of its IP — existing entries are converted automatically at the next start, and a changed IP no longer creates a duplicate (use **Reconfigure** to point an entry at a new address; it refuses a different boiler). The boiler link moved to asyncio streams with per-transaction timeouts. A wrong password is still only detected on the first write — reads never send it. Restart Home Assistant after updating.
+
 ### Upgrading to 0.5.0
 
 Adds **Solar dump automatic mode** — a differential-temperature controller that runs the DHW → buffer transfer by itself (see *Automatic mode* above), plus its four Configuration number entities (auto DHW floor, buffer target, ΔT to start, circulator budget per day) and a **circulator runtime today** sensor. New entities + translations need a full HA restart to show. No breaking changes; the auto switch is off until you turn it on.
