@@ -216,6 +216,9 @@ MAX_UPDATE_INTERVAL = 300
 # Still need to be polled into coordinator.data so device_info properties
 # can read them (see device.py's boiler_device_info(serial_number=...)).
 DEVICE_INFO_PARAMS = ["uid"]
+# Factory serial number: the config entry's unique_id when readable (an IP can
+# change), and the device registry's serial_number.
+SERIAL_SLUG = "uid"
 
 # --- BINARY SENSOR CONFIGURATION ---
 # "Manual mode active": heatsourcemainpumpstate bit 6 (value 64). Empirically

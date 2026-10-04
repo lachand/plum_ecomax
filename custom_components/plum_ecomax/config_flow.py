@@ -31,8 +31,10 @@ from .const import (
     DOMAIN,
     MAX_UPDATE_INTERVAL,
     MIN_UPDATE_INTERVAL,
+    SERIAL_SLUG,
     UPDATE_INTERVAL,
 )
+from .device import normalise_serial
 from .plum_device import DEVICE_MAP_PATH, PlumDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,8 +43,6 @@ _LOGGER = logging.getLogger(__name__)
 # real ecoNET conversation (connect + framed request/response + CRC) works,
 # not just that something is listening on the TCP port.
 _PROBE_SLUG = "hdwstate"
-# Factory serial number: the entry's unique_id when readable (an IP can change).
-SERIAL_SLUG = "uid"
 
 
 def _build_data_schema(defaults: Mapping[str, Any]) -> vol.Schema:
@@ -74,16 +74,6 @@ def _build_data_schema(defaults: Mapping[str, Any]) -> vol.Schema:
             ),
         }
     )
-
-
-def _normalise_serial(raw) -> str | None:
-    """Boiler serial number as a stable string, or None if unreadable."""
-    if isinstance(raw, (bytes, bytearray)):
-        raw = bytes(raw).split(b"\x00")[0].decode("ascii", errors="ignore")
-    if raw is None:
-        return None
-    serial = str(raw).strip()
-    return serial or None
 
 
 async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]:
@@ -122,7 +112,7 @@ async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]
             # Best effort: a boiler that doesn't answer for "uid" is still
             # usable, the entry then falls back to an IP-based unique_id.
             with contextlib.suppress(Exception):
-                serial = _normalise_serial(await device.get_value(SERIAL_SLUG, retries=2))
+                serial = normalise_serial(await device.get_value(SERIAL_SLUG, retries=2))
     except Exception as err:
         _LOGGER.debug("Connection test failed for %s: %s", user_input[CONF_IP_ADDRESS], err)
         return "cannot_connect", None

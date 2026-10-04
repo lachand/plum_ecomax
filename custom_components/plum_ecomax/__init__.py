@@ -15,10 +15,9 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
-from .config_flow import SERIAL_SLUG, _normalise_serial
-from .const import CONF_UPDATE_INTERVAL, DEFAULT_PORT, DOMAIN, UPDATE_INTERVAL
+from .const import CONF_UPDATE_INTERVAL, DEFAULT_PORT, DOMAIN, SERIAL_SLUG, UPDATE_INTERVAL
 from .coordinator import PlumDataUpdateCoordinator
-from .device import async_remove_stale_devices, is_stale_device
+from .device import async_remove_stale_devices, is_stale_device, normalise_serial
 from .plum_device import DEVICE_MAP_PATH, PlumDevice
 from .schedule import async_register_services as async_register_schedule_service
 from .schedule import async_unregister_services as async_unregister_schedule_service
@@ -61,7 +60,7 @@ def _adopt_serial_unique_id(
     is reachable and must not depend on it. Entity unique_ids are scoped by
     entry_id, not by this value, so nothing else is renamed.
     """
-    serial = _normalise_serial(coordinator.data.get(SERIAL_SLUG))
+    serial = normalise_serial(coordinator.data.get(SERIAL_SLUG))
     if not serial or entry.unique_id == serial:
         return
     if any(e.unique_id == serial for e in hass.config_entries.async_entries(DOMAIN)):

@@ -16,6 +16,7 @@ guards against that pattern coming back.
 
 import logging
 import re
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -26,6 +27,20 @@ from homeassistant.helpers.entity import DeviceInfo
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def normalise_serial(raw: Any) -> str | None:
+    """Boiler serial number as a stable string, or None if unreadable.
+
+    The "uid" parameter is a RAW (zero-terminated string) value, so it may
+    arrive as already-decoded text or as raw bytes.
+    """
+    if isinstance(raw, (bytes, bytearray)):
+        raw = bytes(raw).split(b"\x00")[0].decode("ascii", errors="ignore")
+    if raw is None:
+        return None
+    serial = str(raw).strip()
+    return serial or None
 
 
 def boiler_device_info(entry_id: str, serial_number: str | None = None) -> DeviceInfo:

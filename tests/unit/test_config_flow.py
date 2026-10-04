@@ -28,6 +28,7 @@ from custom_components.plum_ecomax.const import (
     MIN_UPDATE_INTERVAL,
     UPDATE_INTERVAL,
 )
+from custom_components.plum_ecomax.device import normalise_serial
 
 
 def _fake_hass():
@@ -251,7 +252,7 @@ class TestSerialProbe:
         ],
     )
     def test_normalise_serial(self, raw, expected):
-        assert config_flow_module._normalise_serial(raw) == expected
+        assert normalise_serial(raw) == expected
 
 
 def _flow(entries=()):
