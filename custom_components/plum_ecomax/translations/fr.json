@@ -11,6 +11,14 @@
                     "password": "Mot de passe",
                     "active_circuits": "Circuits de chauffage actifs",
                     "update_interval": "Intervalle de sondage (secondes)"
+                },
+                "data_description": {
+                    "ip_address": "Adresse IP locale du module ecoNET relié à la chaudière.",
+                    "port": "Port TCP du module ecoNET (8899 par défaut).",
+                    "username": "Nom d'utilisateur envoyé avec les commandes d'écriture. Les lectures ne l'utilisent pas.",
+                    "password": "Mot de passe envoyé avec les commandes d'écriture. La chaudière ne le vérifie qu'à l'écriture : un mauvais mot de passe ne se voit qu'à la première écriture.",
+                    "active_circuits": "Circuits de chauffage pour lesquels créer des entités. Les circuits non cochés sont ignorés.",
+                    "update_interval": "Secondes entre deux relevés de la chaudière (10 à 300). Les températures sont relues à chaque relevé ; consignes et programmes sont mis en cache plus longtemps."
                 }
             },
             "reconfigure": {
@@ -23,6 +31,14 @@
                     "password": "Mot de passe",
                     "active_circuits": "Circuits de chauffage actifs",
                     "update_interval": "Intervalle de sondage (secondes)"
+                },
+                "data_description": {
+                    "ip_address": "Adresse IP locale du module ecoNET relié à la chaudière.",
+                    "port": "Port TCP du module ecoNET (8899 par défaut).",
+                    "username": "Nom d'utilisateur envoyé avec les commandes d'écriture. Les lectures ne l'utilisent pas.",
+                    "password": "Mot de passe envoyé avec les commandes d'écriture. La chaudière ne le vérifie qu'à l'écriture : un mauvais mot de passe ne se voit qu'à la première écriture.",
+                    "active_circuits": "Circuits de chauffage pour lesquels créer des entités. Les circuits non cochés sont ignorés.",
+                    "update_interval": "Secondes entre deux relevés de la chaudière (10 à 300). Les températures sont relues à chaque relevé ; consignes et programmes sont mis en cache plus longtemps."
                 }
             }
         },

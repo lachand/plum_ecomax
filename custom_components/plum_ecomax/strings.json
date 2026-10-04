@@ -11,6 +11,14 @@
                     "password": "Password",
                     "active_circuits": "Active Heating Circuits",
                     "update_interval": "Polling interval (seconds)"
+                },
+                "data_description": {
+                    "ip_address": "Local IP address of the ecoNET module connected to the boiler.",
+                    "port": "TCP port of the ecoNET module (8899 by default).",
+                    "username": "User name sent with write commands. Reads do not use it.",
+                    "password": "Password sent with write commands. The boiler only checks it when something is written, so a wrong password shows up on the first write.",
+                    "active_circuits": "Heating circuits to create entities for. Circuits left out are skipped.",
+                    "update_interval": "Seconds between polls of the boiler (10 to 300). Live temperatures are re-read every poll; setpoints and schedules are cached longer."
                 }
             },
             "reconfigure": {
@@ -23,6 +31,14 @@
                     "password": "Password",
                     "active_circuits": "Active Heating Circuits",
                     "update_interval": "Polling interval (seconds)"
+                },
+                "data_description": {
+                    "ip_address": "Local IP address of the ecoNET module connected to the boiler.",
+                    "port": "TCP port of the ecoNET module (8899 by default).",
+                    "username": "User name sent with write commands. Reads do not use it.",
+                    "password": "Password sent with write commands. The boiler only checks it when something is written, so a wrong password shows up on the first write.",
+                    "active_circuits": "Heating circuits to create entities for. Circuits left out are skipped.",
+                    "update_interval": "Seconds between polls of the boiler (10 to 300). Live temperatures are re-read every poll; setpoints and schedules are cached longer."
                 }
             }
         },

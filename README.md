@@ -100,6 +100,49 @@ You will need to provide:
 
 Any of these can be changed later via **Reconfigure** on the integration card, without removing it.
 
+## Supported devices
+
+Developed and tested against a **Plum ecoMAX 360i** through its **ecoNET** network module (local TCP, default port 8899). The parameter catalogue bundled with the integration (`device_map_ecomax360i.json`) is the 360i's. Other ecoMAX controllers that speak the same protocol may work but are untested; a parameter that a boiler does not expose is simply skipped (no entity), which is how the integration copes with a model that has fewer circuits or sensors.
+
+## Entities and actions
+
+| Platform | What you get |
+|---|---|
+| Sensor | Temperatures, power, circuit names, serial number (on the device page), link health ("last communication", "consecutive failures"), circulator runtime today |
+| Binary sensor | "Manual mode active", coarse alarm-bit indicators |
+| Number | Setpoints, heating curves, cooling bounds, DHW circulation timing, solar-dump thresholds |
+| Switch | Manual mode, DHW anti-legionella cycle, DHW reload, **DHW pump → Solar buffer**, solar-dump automatic mode |
+| Select / Water heater / Climate | DHW mode, DHW tank, one thermostat per active circuit |
+| Calendar | Weekly comfort/eco program per circuit and for DHW |
+| Button | Save / restore a reference snapshot of the curve and DHW configuration |
+
+Two actions are registered: **`plum_ecomax.set_schedule`** (rewrite a weekly program) and **`plum_ecomax.solar_to_buffer`** (timed DHW → buffer transfer). Both are described in `services.yaml` and shown in Developer tools → Actions.
+
+## Data updates
+
+The integration polls the boiler locally. The interval is configurable (10-300 s, 30 s by default). Live telemetry is re-read every cycle; setpoints, curves and schedules are cached for about five minutes (a write refreshes them). Reads are batched (several parameters per request) over one TCP connection kept open between polls. When the boiler cannot be reached, entities become *unavailable*, the outage is logged once, a repair issue is raised, and the polling interval doubles up to five minutes until the boiler answers again.
+
+## Removing the integration
+
+Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Removal first stops any running solar-dump session and writes the boiler back to automatic mode, closes the connection, and deletes the saved reference-values snapshot. The boiler keeps its current settings; nothing is changed on it beyond that return to automatic. Devices of circuits that are no longer active are removed automatically at startup, and can also be deleted from the UI.
+
+## Troubleshooting
+
+* **Cannot connect / entry keeps retrying:** check the IP address and port, and that no other client is using the module. The ecoNET module answers the requests of **one client at a time** (with two connections open, only the most recent one was answered in tests), so the ecoNET app, another Home Assistant or a script on the same module will starve the integration.
+* **Occasional slow or missing readings:** the module ignores requests that arrive while it is emitting its bursts of unsolicited frames (a sizeable share of requests during measurements). The integration skips those frames, keeps the connection and retries; the *consecutive failures* sensor shows how often it happens.
+* **Everything is *unavailable*:** the boiler is unreachable. A "connection lost" repair issue appears in Settings → Repairs and clears by itself when communication returns.
+* **A write has no effect / "write rejected" repair issue:** the boiler answered an error code (0x7D means authentication). Check the user name and password with **Reconfigure**. Reads never send the password, so a wrong one only shows on the first write.
+* **Manual mode stuck:** if the integration cannot return the boiler to automatic after a solar-dump session, a `manual_mode_stuck` repair issue is raised; switch the controller back to automatic on its panel.
+* **More detail:** download the redacted diagnostics from the device page, and enable debug logging with `logger: logs: custom_components.plum_ecomax: debug` in `configuration.yaml`.
+
+## Known limitations
+
+* One boiler per module address; the integration is configured by IP, there is no automatic discovery.
+* The active circuits are chosen in the configuration; the integration does not add circuits by itself.
+* The password is only used, and only checked by the boiler, when something is written.
+* While a solar-dump session runs, the boiler is in manual mode and its automatic regulation is off. The return to automatic is guaranteed on the timer, on unload and on Home Assistant shutdown, but a boiler restarted or disconnected in the middle of a session is not under the integration's control.
+* Tested on one boiler model (see *Supported devices*).
+
 ## Development
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.

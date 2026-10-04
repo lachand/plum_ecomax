@@ -1,0 +1,174 @@
+# Home Assistant Integration Quality Scale -- self-assessment for the custom
+# integration (hassfest only enforces this file for core integrations).
+# Each rule: done / exempt (with the reason) / todo (with what is missing).
+# Reviewed at v0.8.5; see the notes on each non-"done" rule.
+rules:
+  # ---- Bronze -----------------------------------------------------------
+  action-setup:
+    status: todo
+    comment: >-
+      set_schedule and solar_to_buffer are registered (idempotently) from
+      async_setup_entry and removed with the last entry; the rule wants them
+      registered once in async_setup.
+  appropriate-polling:
+    status: done
+    comment: >-
+      Local polling, 30 s by default and configurable from 10 to 300 s; live
+      readings every cycle, setpoints cached about five minutes; the interval
+      doubles up to five minutes while the boiler is unreachable.
+  brands:
+    status: todo
+    comment: No brand images (icon/logo) are shipped yet.
+  common-modules:
+    status: done
+    comment: >-
+      coordinator.py, device.py (device registry helpers), transport.py,
+      protocol.py, parameters.py; entities share the coordinator base.
+  config-flow-test-coverage:
+    status: done
+    comment: >-
+      config_flow.py is at 100 % and tests_ha drives the real flow manager
+      (user, duplicate, connection error, reconfigure).
+  config-flow:
+    status: done
+    comment: UI setup and reconfigure, with data_description on every field.
+  dependency-transparency:
+    status: exempt
+    comment: No third-party requirement (requirements is empty); the driver is in-tree.
+  docs-actions:
+    status: done
+    comment: README "Entities and actions" and services.yaml.
+  docs-high-level-description:
+    status: done
+  docs-installation-instructions:
+    status: done
+  docs-removal-instructions:
+    status: done
+  entity-event-setup:
+    status: exempt
+    comment: Entities read the coordinator; nothing subscribes to events.
+  entity-unique-id:
+    status: done
+  has-entity-name:
+    status: done
+  runtime-data:
+    status: done
+    comment: ConfigEntry[PlumDataUpdateCoordinator] via entry.runtime_data.
+  test-before-configure:
+    status: done
+    comment: The config flow reads a parameter and the serial number from the boiler first.
+  test-before-setup:
+    status: done
+    comment: >-
+      The first refresh raises UpdateFailed when nothing can be read, so the
+      entry is retried (ConfigEntryNotReady) instead of loading empty.
+  unique-config-entry:
+    status: done
+    comment: Keyed by the boiler's serial number (IP as a fallback); duplicates are aborted.
+
+  # ---- Silver -----------------------------------------------------------
+  action-exceptions:
+    status: todo
+    comment: >-
+      Writes are confirmed in the background (optimistic state, up to five
+      attempts, then a revert and a repair issue); the entity actions and
+      services do not raise when a write finally fails.
+  config-entry-unloading:
+    status: done
+    comment: >-
+      Unload stops the solar-dump session and returns the boiler to automatic
+      before closing the connection; covered against a real boiler and in tests_ha.
+  docs-configuration-parameters:
+    status: done
+  docs-installation-parameters:
+    status: done
+  entity-unavailable:
+    status: done
+    comment: Entities become unavailable when the coordinator update fails.
+  integration-owner:
+    status: done
+    comment: codeowners in manifest.json.
+  log-when-unavailable:
+    status: done
+    comment: One warning when communication is lost, one info when it is restored.
+  parallel-updates:
+    status: done
+    comment: 0 for the read-only platforms, 1 for the platforms that send commands.
+  reauthentication-flow:
+    status: exempt
+    comment: >-
+      Reads never authenticate; the credentials are only sent with writes, so
+      there is no setup/update-time authentication failure to trigger a reauth.
+      A rejected write raises a "write rejected" repair issue and the
+      credentials are fixed with Reconfigure.
+  test-coverage:
+    status: done
+    comment: 98 % with the unit tests and the tests against a real Home Assistant.
+
+  # ---- Gold -------------------------------------------------------------
+  devices:
+    status: done
+    comment: Boiler, DHW, one device per active circuit, mixers; stable identifiers per entry.
+  diagnostics:
+    status: done
+  discovery-update-info:
+    status: exempt
+    comment: The ecoNET module is configured by IP; there is no discovery.
+  discovery:
+    status: exempt
+    comment: No discovery protocol is used; the module is added by its IP address.
+  docs-data-update:
+    status: done
+  docs-examples:
+    status: done
+    comment: README solar-dump example.
+  docs-known-limitations:
+    status: done
+  docs-supported-devices:
+    status: done
+  docs-supported-functions:
+    status: done
+  docs-troubleshooting:
+    status: done
+  docs-use-cases:
+    status: done
+  dynamic-devices:
+    status: exempt
+    comment: >-
+      The set of devices is chosen in the configuration (active circuits); a
+      device that is no longer produced is removed at startup (stale-devices).
+  entity-category:
+    status: done
+  entity-device-class:
+    status: done
+  entity-disabled-by-default:
+    status: todo
+    comment: Raw diagnostic registers and alarm bits are enabled by default.
+  entity-translations:
+    status: done
+  exception-translations:
+    status: todo
+    comment: No exceptions are raised to the user yet (see action-exceptions).
+  icon-translations:
+    status: todo
+    comment: Icons are set in code (_attr_icon / icon property), not in icons.json.
+  reconfiguration-flow:
+    status: done
+    comment: async_step_reconfigure; refuses a different boiler.
+  repair-issues:
+    status: done
+    comment: connection lost, write rejected, manual mode stuck, alarm active.
+  stale-devices:
+    status: done
+    comment: Removed automatically at startup and deletable from the UI.
+
+  # ---- Platinum ---------------------------------------------------------
+  async-dependency:
+    status: done
+    comment: The driver is pure asyncio (asyncio.open_connection), no blocking library.
+  inject-websession:
+    status: exempt
+    comment: No HTTP; the integration talks raw TCP to the module.
+  strict-typing:
+    status: done
+    comment: mypy --strict (see pyproject.toml) runs in CI on 3.13 and 3.14.
