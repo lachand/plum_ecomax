@@ -15,6 +15,7 @@ registers that don't have a dedicated per-state parameter on the wire:
 """
 
 import logging
+from typing import Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -23,11 +24,12 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ALARM_BITMASK_SLUGS, DOMAIN, MANUAL_MODE_BIT, MANUAL_MODE_SLUG
+from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info
 from .issues import clear_issue, raise_issue
 
@@ -47,7 +49,7 @@ async def async_setup_entry(
         async_add_entities: Callback to add entities to Home Assistant.
     """
     coordinator = entry.runtime_data
-    entities = []
+    entities: list[Entity] = []
 
     if MANUAL_MODE_SLUG in coordinator.device.params_map:
         entities.append(PlumManualModeBinarySensor(coordinator, entry.entry_id))
@@ -67,7 +69,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class PlumManualModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class PlumManualModeBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], BinarySensorEntity):
     """Whether the boiler's physical control panel is in manual override mode."""
 
     _attr_has_entity_name = True
@@ -86,14 +88,14 @@ class PlumManualModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        val = self.coordinator.data.get(MANUAL_MODE_SLUG)
+        val: Any = self.coordinator.data.get(MANUAL_MODE_SLUG)
         try:
             return (int(val) & MANUAL_MODE_BIT) != 0
         except (TypeError, ValueError):
             return None
 
 
-class PlumAlarmBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class PlumAlarmBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], BinarySensorEntity):
     """Coarse "some alarm bit is set" indicator for one alarm register.
 
     Does not decode which specific bit is set -- individual bit meanings
@@ -121,7 +123,7 @@ class PlumAlarmBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        val = self.coordinator.data.get(self._slug)
+        val: Any = self.coordinator.data.get(self._slug)
         try:
             return int(val) != 0
         except (TypeError, ValueError):

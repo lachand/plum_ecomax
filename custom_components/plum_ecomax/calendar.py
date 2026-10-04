@@ -10,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN, WEEKDAY_TO_SLUGS
+from .coordinator import PlumDataUpdateCoordinator
 from .device import circuit_device_info, hdw_device_info
 from .schedule import am_pm_to_slots
 
@@ -44,7 +45,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PlumEconetCalendar(CoordinatorEntity, CalendarEntity):
+class PlumEconetCalendar(CoordinatorEntity[PlumDataUpdateCoordinator], CalendarEntity):
     """Representation of a Plum EcoMAX Calendar.
 
     This entity reads binary registers (AM/PM bitmasks) and converts them

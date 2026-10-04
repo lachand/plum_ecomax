@@ -12,12 +12,13 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONFIG_SWITCHES, DOMAIN, SWITCH_TYPES
+from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, hdw_device_info
 from .solar_dump import (
     async_auto_disable,
@@ -54,7 +55,7 @@ async def async_setup_entry(
         async_add_entities: Callback to add entities to Home Assistant.
     """
     coordinator = entry.runtime_data
-    entities = []
+    entities: list[Entity] = []
 
     for slug, cfg in SWITCH_TYPES.items():
         name, on_value, off_value = cfg
@@ -70,7 +71,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PlumEconetSwitch(CoordinatorEntity, SwitchEntity):
+class PlumEconetSwitch(CoordinatorEntity[PlumDataUpdateCoordinator], SwitchEntity):
     """Representation of a binary switch.
 
     This entity represents a writable boolean parameter on the device.
@@ -118,7 +119,7 @@ class PlumEconetSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool:
-        val = self.coordinator.data.get(self._slug)
+        val: Any = self.coordinator.data.get(self._slug)
         try:
             return int(val) == self._on_value
         except (ValueError, TypeError):
@@ -139,7 +140,9 @@ class PlumEconetSwitch(CoordinatorEntity, SwitchEntity):
         await self.coordinator.async_set_value(self._slug, self._off_value)
 
 
-class PlumSolarDumpAutoSwitch(CoordinatorEntity, RestoreEntity, SwitchEntity):
+class PlumSolarDumpAutoSwitch(
+    CoordinatorEntity[PlumDataUpdateCoordinator], RestoreEntity, SwitchEntity
+):
     """Automatic solar-dump mode: a dT controller that runs the transfer in
     bursts (see solar_dump.py). HA-local state, persisted across restarts.
     """

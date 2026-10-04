@@ -23,6 +23,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, HA_TO_PLUM_WATER_HEATER, PLUM_TO_HA_WATER_HEATER, WATER_HEATER_TYPES
+from .coordinator import PlumDataUpdateCoordinator
 from .device import hdw_device_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
+class PlumEcomaxWaterHeater(CoordinatorEntity[PlumDataUpdateCoordinator], WaterHeaterEntity):
     """Representation of the Domestic Hot Water (DHW) tank.
 
     This entity controls the hot water production. It reads dynamic limits
@@ -190,7 +191,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
         Returns:
             float: The limit value.
         """
-        val = self.coordinator.data.get(self._min_slug)
+        val: Any = self.coordinator.data.get(self._min_slug)
         try:
             f = float(val)
             if math.isnan(f):
@@ -209,7 +210,7 @@ class PlumEcomaxWaterHeater(CoordinatorEntity, WaterHeaterEntity):
         Returns:
             float: The limit value.
         """
-        val = self.coordinator.data.get(self._max_slug)
+        val: Any = self.coordinator.data.get(self._max_slug)
         try:
             f = float(val)
             if math.isnan(f):

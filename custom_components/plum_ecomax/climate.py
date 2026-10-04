@@ -18,6 +18,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
+from .coordinator import PlumDataUpdateCoordinator
 from .device import circuit_device_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         async_add_entities(entities)
 
 
-class PlumEcomaxClimate(CoordinatorEntity, ClimateEntity):
+class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEntity):
     """Representation of a Plum EcoMAX heating circuit thermostat.
 
     This entity controls the heating parameters for a specific circuit.

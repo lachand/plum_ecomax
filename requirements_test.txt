@@ -8,3 +8,4 @@
 homeassistant>=2025.2.0
 pytest~=9.1
 pytest-asyncio~=1.4
+mypy>=1.13

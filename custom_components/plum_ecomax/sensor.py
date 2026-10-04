@@ -13,6 +13,7 @@ import logging
 import math  # <--- CRITICAL: Import required for NaN checks
 import re
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -24,10 +25,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACTIVE_CIRCUITS, DIAGNOSTIC_SENSOR_SLUGS, DOMAIN, SENSOR_TYPES
+from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, circuit_device_info
 from .solar_dump import auto_runtime_minutes, auto_seed_runtime
 
@@ -57,7 +60,7 @@ async def async_setup_entry(
     """
     coordinator = entry.runtime_data
     selected_circuits = entry.data.get(CONF_ACTIVE_CIRCUITS, [])
-    entities = []
+    entities: list[Entity] = []
 
     for slug, config in SENSOR_TYPES.items():
         # Skip if the parameter is not present on the device
@@ -89,7 +92,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class PlumEcomaxSensor(CoordinatorEntity, SensorEntity):
+class PlumEcomaxSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntity):
     """Representation of a Plum sensor entity with NaN protection.
 
     This entity handles both numeric and text sensors. For numeric sensors,
@@ -187,9 +190,11 @@ class PlumEcomaxSensor(CoordinatorEntity, SensorEntity):
         return self._icon
 
     @property
-    def device_class(self) -> str | None:
+    def device_class(self) -> SensorDeviceClass | None:
         """Returns the device class."""
-        return self._device_class
+        # SENSOR_TYPES stores the plain strings ("temperature", ...); a
+        # SensorDeviceClass is a StrEnum, so they compare and serialise alike.
+        return cast(SensorDeviceClass | None, self._device_class)
 
     @property
     def state_class(self) -> SensorStateClass | None:
@@ -220,7 +225,7 @@ class PlumEcomaxSensor(CoordinatorEntity, SensorEntity):
         return boiler_device_info(self._entry_id, self.coordinator.data.get("uid"))
 
 
-class _PlumLinkHealthSensor(CoordinatorEntity, SensorEntity):
+class _PlumLinkHealthSensor(CoordinatorEntity[PlumDataUpdateCoordinator], SensorEntity):
     """Base for the two link-health diagnostic sensors, both read directly
     off PlumDevice rather than from a device-map parameter.
     """
@@ -270,7 +275,9 @@ class PlumConsecutiveFailuresSensor(_PlumLinkHealthSensor):
         return self.coordinator.device.consecutive_failures
 
 
-class PlumSolarDumpRuntimeSensor(CoordinatorEntity, RestoreSensor, SensorEntity):
+class PlumSolarDumpRuntimeSensor(
+    CoordinatorEntity[PlumDataUpdateCoordinator], RestoreSensor, SensorEntity
+):
     """Minutes the transfer circulator has run today under the automatic
     solar dump. Resets at midnight (handled by the controller); persisted so
     a restart doesn't lose the day's total.
@@ -298,7 +305,8 @@ class PlumSolarDumpRuntimeSensor(CoordinatorEntity, RestoreSensor, SensorEntity)
         last = await self.async_get_last_sensor_data()
         if last is not None and last.native_value is not None:
             with contextlib.suppress(TypeError, ValueError):
-                auto_seed_runtime(self.coordinator, float(last.native_value))
+                native: Any = last.native_value
+                auto_seed_runtime(self.coordinator, float(native))
 
     @property
     def native_value(self) -> float:

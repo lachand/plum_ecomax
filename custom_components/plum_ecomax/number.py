@@ -14,6 +14,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN, NUMBER_TYPES, SOLAR_DUMP_NUMBERS
+from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info, circuit_device_info, hdw_device_info, mixers_device_info
 
 _SOLAR_DUMP_UNITS = {
@@ -91,7 +92,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
 
 
-class PlumEcomaxNumber(CoordinatorEntity, NumberEntity):
+class PlumEcomaxNumber(CoordinatorEntity[PlumDataUpdateCoordinator], NumberEntity):
     """Representation of a Plum EcoMAX numerical parameter.
 
     This entity allows the user to adjust a numerical value (e.g., setpoint,

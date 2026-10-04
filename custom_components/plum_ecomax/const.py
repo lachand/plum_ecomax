@@ -346,7 +346,7 @@ CLIMATE_TYPES = {
     for i in range(1, 8)
 }
 
-NUMBER_TYPES = {
+NUMBER_TYPES: dict[str, tuple[float, float, float, str]] = {
     # Force buffer tank loading for N minutes (0 = disabled)
     # Bypasses the normal temperature comparison logic (useful for solar pre-heating)
     "buforlongloadtime": (0, 180, 1, "mdi:timer"),

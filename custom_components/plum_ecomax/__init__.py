@@ -12,6 +12,7 @@ from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.typing import ConfigType
 
 from .config_flow import SERIAL_SLUG, _normalise_serial
 from .const import CONF_UPDATE_INTERVAL, DEFAULT_PORT, DOMAIN, UPDATE_INTERVAL
@@ -67,7 +68,7 @@ def _adopt_serial_unique_id(
     hass.config_entries.async_update_entry(entry, unique_id=serial)
 
 
-async def async_setup(hass: HomeAssistant, config: dict):
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Plum EcoMAX component.
 
     Args:
@@ -80,7 +81,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool:
     """Set up Plum EcoMAX from a config entry.
 
     This function initializes the connection to the boiler, loads the
@@ -122,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool:
     """Unload a config entry.
 
     Args:

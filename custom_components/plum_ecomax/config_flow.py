@@ -8,6 +8,8 @@ port, password, and active heating circuits.
 import asyncio
 import contextlib
 import logging
+from collections.abc import Mapping
+from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -44,7 +46,7 @@ _PROBE_SLUG = "hdwstate"
 SERIAL_SLUG = "uid"
 
 
-def _build_data_schema(defaults: dict) -> vol.Schema:
+def _build_data_schema(defaults: Mapping[str, Any]) -> vol.Schema:
     """Builds the connection form schema, pre-filled from `defaults`."""
     return vol.Schema(
         {

@@ -29,6 +29,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Any
 
 import voluptuous as vol
 from homeassistant.components import persistent_notification
@@ -403,7 +404,7 @@ async def async_stop_for_entry(hass: HomeAssistant, coordinator) -> None:
 
 
 def _num(coordinator, attr: str, default: float) -> float:
-    v = getattr(coordinator, attr, None)
+    v: Any = getattr(coordinator, attr, None)
     try:
         return float(v)
     except (TypeError, ValueError):

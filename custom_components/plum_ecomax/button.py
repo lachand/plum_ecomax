@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACTIVE_CIRCUITS, DOMAIN
+from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info
 from .number import active_number_slugs, is_config_category_slug
 
@@ -41,7 +42,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     )
 
 
-class _PlumDefaultsButtonBase(CoordinatorEntity, ButtonEntity):
+class _PlumDefaultsButtonBase(CoordinatorEntity[PlumDataUpdateCoordinator], ButtonEntity):
     """Shared plumbing for the save/restore buttons."""
 
     _attr_has_entity_name = True

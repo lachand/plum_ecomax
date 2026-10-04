@@ -8,6 +8,7 @@ write strategy to ensure commands reach the device despite network latency.
 import asyncio
 import logging
 import time
+from collections.abc import Mapping
 from datetime import timedelta
 
 # Conditional import for typing only
@@ -89,6 +90,9 @@ VALIDATION_RANGES = {
 
 
 class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
+    # Always created with its config entry (see __init__): narrows the base
+    # class's Optional so the entry's background-task API can be called.
+    config_entry: ConfigEntry
     """Centralized data management with Robust Data Validation.
 
     Implements caching, write-through strategies, and data sanitization
@@ -274,7 +278,7 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
             _LOGGER.debug("Rejection: %s returned sensor error code %s", slug, raw_val)
             return False, None
 
-        param_def = self.device.params_map.get(slug, {})
+        param_def: Mapping[str, Any] = self.device.params_map.get(slug) or {}
         json_min = param_def.get("min")
         json_max = param_def.get("max")
         json_max_delta = param_def.get("max_delta")
@@ -444,8 +448,8 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
         for conf in CLIMATE_TYPES.values():
             targets.extend(conf)
         targets.extend(list(NUMBER_TYPES.keys()))
-        for conf in WATER_HEATER_TYPES.values():
-            targets.extend(conf)
+        for wh_conf in WATER_HEATER_TYPES.values():
+            targets.extend(wh_conf)
         # Added Schedule types to detection
         targets.extend(list(SCHEDULE_TYPES.keys()))
         # SWITCH_TYPES/SELECT_TYPES were missing here entirely: since

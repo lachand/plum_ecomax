@@ -25,6 +25,16 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B011", "SIM117"]
 
+[tool.mypy]
+python_version = "3.13"
+files = ["custom_components"]
+# homeassistant ships its own types; the few third-party stubs we don't have
+# (voluptuous extras) shouldn't fail the run.
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+exclude = ["tools/"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

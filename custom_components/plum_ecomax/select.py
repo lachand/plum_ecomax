@@ -6,6 +6,7 @@ for parameters that have a discrete set of options, such as the DHW mode
 """
 
 import logging
+from typing import Any
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -15,6 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, SELECT_TYPES
+from .coordinator import PlumDataUpdateCoordinator
 from .device import hdw_device_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,7 +52,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PlumEconetSelect(CoordinatorEntity, SelectEntity):
+class PlumEconetSelect(CoordinatorEntity[PlumDataUpdateCoordinator], SelectEntity):
     """Representation of a multi-choice parameter (Enum).
 
     This entity represents a selectable parameter on the Plum device,
@@ -106,7 +108,7 @@ class PlumEconetSelect(CoordinatorEntity, SelectEntity):
         Returns:
             str | None: The selected option string, or None if unknown.
         """
-        raw_val = self.coordinator.data.get(self._slug)
+        raw_val: Any = self.coordinator.data.get(self._slug)
         try:
             raw_int = int(raw_val)
             return self._map_to_ha.get(raw_int)
