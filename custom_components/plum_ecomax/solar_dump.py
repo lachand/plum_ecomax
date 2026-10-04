@@ -27,14 +27,15 @@ import asyncio
 import contextlib
 import logging
 import time
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
-from datetime import timedelta
-from typing import Any
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant.components import persistent_notification
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import Event, HomeAssistant, ServiceCall
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
@@ -59,6 +60,11 @@ from .const import (
     SOLAR_DUMP_TEMP_MIN,
 )
 from .issues import clear_issue, raise_issue
+
+if TYPE_CHECKING:  # annotations only: __init__ imports this module
+    from . import PlumConfigEntry
+    from .coordinator import PlumDataUpdateCoordinator
+    from .plum_device import PlumDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -104,17 +110,17 @@ class SolarDumpState:
     unload_hooked: bool = field(default=False, repr=False)
 
 
-def _state(coordinator) -> SolarDumpState:
+def _state(coordinator: PlumDataUpdateCoordinator) -> SolarDumpState:
     """The coordinator's SolarDumpState, created on first access (lazily, so
     a coordinator built without going through __init__ still works)."""
-    state = vars(coordinator).get("_solar_dump_state")
+    state: SolarDumpState | None = vars(coordinator).get("_solar_dump_state")
     if state is None:
         state = SolarDumpState()
         coordinator._solar_dump_state = state
     return state
 
 
-def _optimistic(coordinator, **values) -> None:
+def _optimistic(coordinator: PlumDataUpdateCoordinator, **values: Any) -> None:
     """Nudge the coordinator's cache so entities reflect a write immediately
     instead of waiting for the next poll -- the same in-place update +
     listener notify that coordinator.async_set_value does. Safe to call any
@@ -126,7 +132,9 @@ def _optimistic(coordinator, **values) -> None:
             coordinator.async_set_updated_data(data)
 
 
-def _threshold(coordinator, attr: str, override=None) -> float | None:
+def _threshold(
+    coordinator: PlumDataUpdateCoordinator, attr: str, override: float | None = None
+) -> float | None:
     """The DHW-temperature threshold to use: a per-call override if given,
     else the coordinator attribute the number entity keeps up to date.
     Coerced to float, or None if neither is a usable number."""
@@ -141,7 +149,7 @@ def _threshold(coordinator, attr: str, override=None) -> float | None:
     return None
 
 
-async def _confirmed_write(dev, slug: str, value: int, tries: int = 3) -> bool:
+async def _confirmed_write(dev: PlumDevice, slug: str, value: int, tries: int = 3) -> bool:
     """Write and wait for the boiler's own confirmation, retrying."""
     for attempt in range(1, tries + 1):
         if await dev.set_value(slug, value):
@@ -151,7 +159,9 @@ async def _confirmed_write(dev, slug: str, value: int, tries: int = 3) -> bool:
     return False
 
 
-async def _restore(hass: HomeAssistant, coordinator, entry_id: str, *, exit_manual: bool) -> None:
+async def _restore(
+    hass: HomeAssistant, coordinator: PlumDataUpdateCoordinator, entry_id: str, *, exit_manual: bool
+) -> None:
     """Undo what we did: always clear the pump force; leave manual mode only
     if we were the ones who entered it. Idempotent, loud on failure."""
     dev = coordinator.device
@@ -187,7 +197,7 @@ async def _restore(hass: HomeAssistant, coordinator, entry_id: str, *, exit_manu
         raise_issue(hass, STUCK_ISSUE_ID, STUCK_ISSUE_ID, severity=ir.IssueSeverity.ERROR)
 
 
-async def _hold(dev, hold_s: int | None, stop_temp: float | None) -> None:
+async def _hold(dev: PlumDevice, hold_s: int | None, stop_temp: float | None) -> None:
     """Wait out the forced-pump period. `hold_s` None = until cancelled.
     If `stop_temp` is set, poll the DHW tank temperature and return early
     once it drops to that threshold (so the tank isn't drained too far)."""
@@ -216,7 +226,7 @@ async def _hold(dev, hold_s: int | None, stop_temp: float | None) -> None:
 
 async def _dump_lifecycle(
     hass: HomeAssistant,
-    coordinator,
+    coordinator: PlumDataUpdateCoordinator,
     entry_id: str,
     hold_s: int | None,
     start_temp_override: float | None = None,
@@ -311,7 +321,12 @@ async def _dump_lifecycle(
 
 
 async def _replace_run(
-    hass: HomeAssistant, coordinator, entry_id: str, coro, name: str, owner: str
+    hass: HomeAssistant,
+    coordinator: PlumDataUpdateCoordinator,
+    entry_id: str,
+    coro: Coroutine[Any, Any, None],
+    name: str,
+    owner: str,
 ) -> None:
     state = _state(coordinator)
     existing, state.task = state.task, None
@@ -326,7 +341,7 @@ async def _replace_run(
 
 async def async_start_hold(
     hass: HomeAssistant,
-    coordinator,
+    coordinator: PlumDataUpdateCoordinator,
     entry_id: str,
     *,
     owner: str = "manual",
@@ -382,7 +397,7 @@ async def _handle_solar_to_buffer(hass: HomeAssistant, call: ServiceCall) -> Non
         )
 
 
-async def async_stop_for_entry(hass: HomeAssistant, coordinator) -> None:
+async def async_stop_for_entry(hass: HomeAssistant, coordinator: PlumDataUpdateCoordinator) -> None:
     """Cancel a running manual-mode session for one entry and wait for its
     restore. Used by the switch's turn_off, by the HA-stop listener and by
     async_unload_entry (called BEFORE the device socket is closed, so the
@@ -403,7 +418,7 @@ async def async_stop_for_entry(hass: HomeAssistant, coordinator) -> None:
 # --------------------------------------------------------------------------
 
 
-def _num(coordinator, attr: str, default: float) -> float:
+def _num(coordinator: PlumDataUpdateCoordinator, attr: str, default: float) -> float:
     v: Any = getattr(coordinator, attr, None)
     try:
         return float(v)
@@ -411,7 +426,7 @@ def _num(coordinator, attr: str, default: float) -> float:
         return default
 
 
-def _buffer_temp(coordinator) -> float | None:
+def _buffer_temp(coordinator: PlumDataUpdateCoordinator) -> float | None:
     """Best available buffer temperature. tempbuforup reads 999 (fault) on
     this boiler, so in practice this is tempbufordown."""
     for slug in BUFFER_TEMP_SLUGS:
@@ -421,7 +436,7 @@ def _buffer_temp(coordinator) -> float | None:
     return None
 
 
-def _in_legionella_hour(coordinator) -> bool:
+def _in_legionella_hour(coordinator: PlumDataUpdateCoordinator) -> bool:
     """True during the boiler's weekly anti-legionella hour -- the boiler is
     driving the DHW tank up to ~70 C then, so a burst would fight it."""
     hour = coordinator.data.get("hdwlegionhour")
@@ -434,26 +449,26 @@ def _in_legionella_hour(coordinator) -> bool:
     return not isinstance(day, (int, float)) or int(day) in (0, now.isoweekday())
 
 
-def auto_runtime_minutes(coordinator) -> float:
+def auto_runtime_minutes(coordinator: PlumDataUpdateCoordinator) -> float:
     """Circulator minutes run today by the auto controller (incl. a burst in
     progress). Read by the runtime sensor."""
     st = _state(coordinator).auto
     if not st:
         return 0.0
-    total = st["runtime_today"]
+    total: float = st["runtime_today"]
     if st["running"] and st["last_start"] is not None:
         total += (time.monotonic() - st["last_start"]) / 60
     return round(total, 1)
 
 
-def _auto_state(coordinator) -> dict:
+def _auto_state(coordinator: PlumDataUpdateCoordinator) -> dict[str, Any]:
     state = _state(coordinator)
     if state.auto is None:
         state.auto = _fresh_auto_state()
     return state.auto
 
 
-def auto_seed_runtime(coordinator, minutes: float) -> None:
+def auto_seed_runtime(coordinator: PlumDataUpdateCoordinator, minutes: float) -> None:
     """Restore today's accumulated minutes from the sensor's stored state."""
     st = _auto_state(coordinator)
     st["runtime_today"] = max(st["runtime_today"], float(minutes))
@@ -470,13 +485,15 @@ def _fresh_auto_state() -> dict:
     }
 
 
-async def async_auto_enable(hass: HomeAssistant, coordinator, entry_id: str) -> None:
+async def async_auto_enable(
+    hass: HomeAssistant, coordinator: PlumDataUpdateCoordinator, entry_id: str
+) -> None:
     """Arm the auto controller: tick now, then every AUTO_TICK_SECONDS."""
     st = _auto_state(coordinator)
     if st["unsub"] is not None:
         return
 
-    async def _tick(_now) -> None:
+    async def _tick(_now: datetime | None) -> None:
         with contextlib.suppress(Exception):
             await _auto_tick(hass, coordinator, entry_id)
 
@@ -492,7 +509,7 @@ async def async_auto_enable(hass: HomeAssistant, coordinator, entry_id: str) -> 
     await _tick(None)
 
 
-def _drop_auto_tick(coordinator) -> None:
+def _drop_auto_tick(coordinator: PlumDataUpdateCoordinator) -> None:
     """Cancel the periodic auto tick, if armed. Idempotent."""
     st = _state(coordinator).auto
     if st and st["unsub"] is not None:
@@ -500,7 +517,7 @@ def _drop_auto_tick(coordinator) -> None:
         st["unsub"] = None
 
 
-async def async_auto_disable(hass: HomeAssistant, coordinator) -> None:
+async def async_auto_disable(hass: HomeAssistant, coordinator: PlumDataUpdateCoordinator) -> None:
     """Disarm the auto controller and stop a burst it owns."""
     state = _state(coordinator)
     st = state.auto
@@ -512,13 +529,15 @@ async def async_auto_disable(hass: HomeAssistant, coordinator) -> None:
     _LOGGER.info("solar dump auto: disabled for %s", coordinator.entry_id)
 
 
-async def async_stop_auto(hass: HomeAssistant, coordinator) -> None:
+async def async_stop_auto(hass: HomeAssistant, coordinator: PlumDataUpdateCoordinator) -> None:
     """Full teardown for async_unload_entry: disarm + drop state."""
     await async_auto_disable(hass, coordinator)
     _state(coordinator).auto = None
 
 
-async def _auto_tick(hass: HomeAssistant, coordinator, entry_id: str) -> None:
+async def _auto_tick(
+    hass: HomeAssistant, coordinator: PlumDataUpdateCoordinator, entry_id: str
+) -> None:
     st = _auto_state(coordinator)
     state = _state(coordinator)
     today = dt_util.now().date()
@@ -598,7 +617,11 @@ async def _auto_tick(hass: HomeAssistant, coordinator, entry_id: str) -> None:
 
 
 async def _auto_stop(
-    hass: HomeAssistant, coordinator, st: dict, entry_id: str, reason: str
+    hass: HomeAssistant,
+    coordinator: PlumDataUpdateCoordinator,
+    st: dict,
+    entry_id: str,
+    reason: str,
 ) -> None:
     await async_stop_for_entry(hass, coordinator)
     if st["running"] and st["last_start"] is not None:
@@ -625,11 +648,13 @@ async def async_register_services(hass: HomeAssistant) -> None:
     )
 
 
-def async_register_stop_listener(hass: HomeAssistant, entry, coordinator) -> None:
+def async_register_stop_listener(
+    hass: HomeAssistant, entry: PlumConfigEntry, coordinator: PlumDataUpdateCoordinator
+) -> None:
     """On HA shutdown, stop this entry's session so the boiler is written back
     to automatic. Unsubscribed with the entry (async_on_unload)."""
 
-    async def _on_stop(_event) -> None:
+    async def _on_stop(_event: Event) -> None:
         await async_stop_for_entry(hass, coordinator)
 
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop))

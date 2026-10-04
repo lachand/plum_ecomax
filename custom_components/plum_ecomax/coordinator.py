@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 if TYPE_CHECKING:
     from .plum_device import PlumDevice
+    from .solar_dump import SolarDumpState
 
 from .const import (
     ALARM_BITMASK_SLUGS,
@@ -106,6 +107,8 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
     # The configured polling interval, remembered while update_interval is
     # stretched during an outage (see _stretch_interval).
     _base_interval: timedelta | None = None
+    # Per-boiler solar-dump state, created lazily by solar_dump._state().
+    _solar_dump_state: SolarDumpState | None
 
     def __init__(
         self,
