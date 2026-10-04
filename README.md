@@ -104,6 +104,10 @@ Any of these can be changed later via **Reconfigure** on the integration card, w
 
 Unit and regression tests live in `tests/` (`pytest tests/`). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 0.7.0
+
+Cleanup release, no new entities. **Behaviour changes:** the integration's **Configure** button is gone — use **Reconfigure** (⋮ menu on the integration) to change IP, port, credentials, circuits or polling interval. Entity **names** on the *Circuit N* and *DHW* devices no longer repeat the device name (e.g. "Circuit 1 Base Temperature" is now "Base Temperature" under the device *Circuit 1*, still displayed as "Circuit 1 Base Temperature"); existing entity IDs are unchanged. **Devices that no longer exist** (a circuit that is no longer active, a device left with no entity) are removed automatically at startup, together with their orphaned entities, and can be deleted from the UI. Under the hood: solar-dump state is kept per config entry, frames and parameters are typed, and `mypy` runs in CI. Restart Home Assistant after updating.
+
 ### Upgrading to 0.6.0
 
 Robustness release, no new entities. **Behaviour changes:** when the boiler is unreachable, entities now go *unavailable* (previously they kept showing the last cached value) and the outage is logged once instead of every cycle; if the boiler is unreachable at startup, the integration retries instead of loading empty. Config entries are now keyed by the boiler's **serial number** instead of its IP — existing entries are converted automatically at the next start, and a changed IP no longer creates a duplicate (use **Reconfigure** to point an entry at a new address; it refuses a different boiler). The boiler link moved to asyncio streams with per-transaction timeouts. A wrong password is still only detected on the first write — reads never send it. Restart Home Assistant after updating.
