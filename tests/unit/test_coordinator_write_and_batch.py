@@ -58,6 +58,7 @@ def _make_coordinator(
 ):
     coordinator = object.__new__(PlumDataUpdateCoordinator)
     coordinator.device = device if device is not None else MagicMock()
+    coordinator._delta_rejection_counts = {}  # normally set by __init__
     # config_entry.async_create_background_task schedules the repeated-write
     # coroutine; here just run it on the loop so the existing assertions
     # (which await afterwards) still observe its effects.

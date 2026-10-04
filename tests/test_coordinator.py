@@ -4,10 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.plum_ecomax.coordinator import (
-    MAX_DELTA_REJECTIONS,
-    PlumDataUpdateCoordinator,
-)
+from custom_components.plum_ecomax.coordinator import PlumDataUpdateCoordinator
+from custom_components.plum_ecomax.parameters import MAX_DELTA_REJECTIONS
 
 
 # Mock class to simulate the PlumDevice behavior
