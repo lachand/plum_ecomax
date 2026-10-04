@@ -65,7 +65,7 @@ class Frame(NamedTuple):
     payload: bytes
 
 
-def build_frame(cmd, payload):
+def build_frame(cmd: int, payload: bytes) -> bytes:
     """Constructs the full binary frame (Header + Body + CRC)."""
     l_val = 5 + len(payload)
     header = struct.pack("<HHHB", l_val, DEST_ID, SOURCE_ID, cmd)

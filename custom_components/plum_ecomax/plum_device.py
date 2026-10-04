@@ -54,7 +54,14 @@ class PlumDevice:
     checksum verification, and parameter mapping.
     """
 
-    def __init__(self, ip, port=8899, password="0000", user="admin", map_file="device_map.json"):
+    def __init__(
+        self,
+        ip: str,
+        port: int = 8899,
+        password: str = "0000",
+        user: str = "admin",
+        map_file: str = "device_map.json",
+    ) -> None:
         """Initializes the PlumDevice driver.
 
         Args:
@@ -71,7 +78,7 @@ class PlumDevice:
         self.map_file = map_file
         self.params_map: dict[str, ParamDef] = {}
         self.session_id = 10
-        self._data_cache = {}
+        self._data_cache: dict[str, Any] = {}
         # Serializes all transactions so a background write and a
         # polling read never open concurrent TCP connections to the boiler.
         self._io_lock = asyncio.Lock()
@@ -97,7 +104,7 @@ class PlumDevice:
         # repair issue instead of just the generic warning log.
         self.last_write_error: int | None = None
 
-    def load_map(self):
+    def load_map(self) -> None:
         """Loads the parameter definition map from the JSON file.
 
         The map file defines the ID, type, and exponent for each parameter slug.

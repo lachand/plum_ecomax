@@ -96,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry) -> bool
     Returns:
         bool: True if setup was successful.
     """
-    ip = entry.data.get(CONF_IP_ADDRESS)
+    ip: str = entry.data[CONF_IP_ADDRESS]
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
     password = entry.data.get(CONF_PASSWORD, "0000")
 

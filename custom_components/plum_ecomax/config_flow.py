@@ -14,6 +14,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -76,7 +77,9 @@ def _build_data_schema(defaults: Mapping[str, Any]) -> vol.Schema:
     )
 
 
-async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]:
+async def _probe_boiler(
+    hass: HomeAssistant, user_input: Mapping[str, Any]
+) -> tuple[str | None, str | None]:
     """Tries an actual protocol-level read against the boiler.
 
     This proves the IP/port really reach an ecoNET module -- not just that a
@@ -129,7 +132,7 @@ async def _probe_boiler(hass, user_input: dict) -> tuple[str | None, str | None]
     return None, serial
 
 
-async def _validate_connection(hass, user_input: dict) -> str | None:
+async def _validate_connection(hass: HomeAssistant, user_input: Mapping[str, Any]) -> str | None:
     """Error code from _probe_boiler(), or None on success."""
     error, _serial = await _probe_boiler(hass, user_input)
     return error
@@ -143,7 +146,9 @@ class PlumConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle the initial step.
 
         This method displays the configuration form to the user and validates
@@ -182,7 +187,9 @@ class PlumConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reconfigure(self, user_input=None):
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Change IP/port/credentials of an existing entry in place.
 
         The boiler behind the new address must be the same one: its serial

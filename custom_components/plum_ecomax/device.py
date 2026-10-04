@@ -71,7 +71,7 @@ def hdw_device_info(entry_id: str) -> DeviceInfo:
     )
 
 
-def circuit_device_info(entry_id: str, circuit_id) -> DeviceInfo:
+def circuit_device_info(entry_id: str, circuit_id: int | str) -> DeviceInfo:
     """A heating circuit device."""
     return DeviceInfo(
         identifiers={(DOMAIN, f"{entry_id}_circuit_{circuit_id}")},
