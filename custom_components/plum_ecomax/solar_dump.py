@@ -27,6 +27,7 @@ import asyncio
 import contextlib
 import logging
 import time
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 import voluptuous as vol
@@ -80,13 +81,36 @@ SOLAR_TO_BUFFER_SCHEMA = vol.Schema(
     }
 )
 
-# entry_id -> the running lifecycle task. One manual-mode session per boiler,
-# shared by the service, the switch and the auto controller (last start wins).
-_RUNNING: dict[str, asyncio.Task] = {}
-# entry_id -> who started the current session: "manual" | "service" | "auto".
-# The auto controller only ever stops a session it owns.
-_OWNER: dict[str, str] = {}
-_STOP_UNSUB = None
+
+@dataclass
+class SolarDumpState:
+    """Per-boiler solar-dump state, carried by that entry's coordinator.
+
+    One manual-mode session per boiler, shared by the service, the switch and
+    the auto controller (last start wins).
+    """
+
+    # The running lifecycle task, if any.
+    task: asyncio.Task | None = None
+    # Who started the current session: "manual" | "service" | "auto". The
+    # auto controller only ever stops a session it owns.
+    owner: str | None = None
+    # Auto-controller bookkeeping ({unsub, running, last_start, last_stop,
+    # runtime_today, day}), created on first use -- see _fresh_auto_state().
+    auto: dict | None = None
+    # True once the auto tick's unsubscribe has been handed to the entry's
+    # async_on_unload, so toggling the switch doesn't register it again.
+    unload_hooked: bool = field(default=False, repr=False)
+
+
+def _state(coordinator) -> SolarDumpState:
+    """The coordinator's SolarDumpState, created on first access (lazily, so
+    a coordinator built without going through __init__ still works)."""
+    state = vars(coordinator).get("_solar_dump_state")
+    if state is None:
+        state = SolarDumpState()
+        coordinator._solar_dump_state = state
+    return state
 
 
 def _optimistic(coordinator, **values) -> None:
@@ -269,7 +293,9 @@ async def _dump_lifecycle(
         _LOGGER.info("solar_to_buffer: interrupted -- restoring")
         raise
     finally:
-        _RUNNING.pop(entry_id, None)
+        state = _state(coordinator)
+        if state.task is asyncio.current_task():
+            state.task = None
         if forcing or entered_manual:
             # Awaits in a finally run to completion even while this task is
             # being cancelled (unload / HA stop / a replacing call), so the
@@ -283,15 +309,18 @@ async def _dump_lifecycle(
             _optimistic(coordinator, **{SOLAR_DUMP_FORCE_SLUG: 0})
 
 
-async def _replace_run(hass: HomeAssistant, entry_id: str, coro, name: str, owner: str) -> None:
-    existing = _RUNNING.pop(entry_id, None)
+async def _replace_run(
+    hass: HomeAssistant, coordinator, entry_id: str, coro, name: str, owner: str
+) -> None:
+    state = _state(coordinator)
+    existing, state.task = state.task, None
     if existing and not existing.done():
         _LOGGER.info("solar_to_buffer: a run is active for %s -- replacing it", entry_id)
         existing.cancel()
         with contextlib.suppress(asyncio.CancelledError, Exception):
             await existing
-    _OWNER[entry_id] = owner
-    _RUNNING[entry_id] = hass.async_create_task(coro, name=name)
+    state.owner = owner
+    state.task = hass.async_create_task(coro, name=name)
 
 
 async def async_start_hold(
@@ -313,6 +342,7 @@ async def async_start_hold(
     _optimistic(coordinator, **{SOLAR_DUMP_FORCE_SLUG: SOLAR_DUMP_FORCE_VALUE})
     await _replace_run(
         hass,
+        coordinator,
         entry_id,
         _dump_lifecycle(hass, coordinator, entry_id, None, start_temp, stop_temp),
         f"{DOMAIN} solar_to_buffer hold {entry_id}",
@@ -343,6 +373,7 @@ async def _handle_solar_to_buffer(hass: HomeAssistant, call: ServiceCall) -> Non
         _optimistic(coordinator, **{SOLAR_DUMP_FORCE_SLUG: SOLAR_DUMP_FORCE_VALUE})
         await _replace_run(
             hass,
+            coordinator,
             entry_id,
             _dump_lifecycle(hass, coordinator, entry_id, hold_s, start_override, stop_override),
             f"{DOMAIN} solar_to_buffer {entry_id}",
@@ -350,31 +381,25 @@ async def _handle_solar_to_buffer(hass: HomeAssistant, call: ServiceCall) -> Non
         )
 
 
-async def async_stop_for_entry(hass: HomeAssistant, entry_id: str) -> None:
+async def async_stop_for_entry(hass: HomeAssistant, coordinator) -> None:
     """Cancel a running manual-mode session for one entry and wait for its
-    restore. Used by the switch's turn_off and by async_unload_entry (called
-    BEFORE the device socket is closed, so the restore writes still go out).
+    restore. Used by the switch's turn_off, by the HA-stop listener and by
+    async_unload_entry (called BEFORE the device socket is closed, so the
+    restore writes still go out).
     """
-    _OWNER.pop(entry_id, None)
-    task = _RUNNING.pop(entry_id, None)
+    state = _state(coordinator)
+    state.owner = None
+    task, state.task = state.task, None
     if task and not task.done():
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError, Exception):
             await task
 
 
-async def _async_stop_all(hass: HomeAssistant) -> None:
-    for entry_id in list(_RUNNING):
-        await async_stop_for_entry(hass, entry_id)
-
-
 # --------------------------------------------------------------------------
 # Automatic mode -- a differential-temperature (dT) controller that runs the
 # transfer in bursts. See IMPROVEMENT_PLAN_ARCHIVE.md section O / the plan file.
 # --------------------------------------------------------------------------
-
-# entry_id -> {unsub, running, last_start, last_stop, runtime_today, day}
-_AUTO: dict[str, dict] = {}
 
 
 def _num(coordinator, attr: str, default: float) -> float:
@@ -408,10 +433,10 @@ def _in_legionella_hour(coordinator) -> bool:
     return not isinstance(day, (int, float)) or int(day) in (0, now.isoweekday())
 
 
-def auto_runtime_minutes(entry_id: str) -> float:
+def auto_runtime_minutes(coordinator) -> float:
     """Circulator minutes run today by the auto controller (incl. a burst in
     progress). Read by the runtime sensor."""
-    st = _AUTO.get(entry_id)
+    st = _state(coordinator).auto
     if not st:
         return 0.0
     total = st["runtime_today"]
@@ -420,9 +445,16 @@ def auto_runtime_minutes(entry_id: str) -> float:
     return round(total, 1)
 
 
-def auto_seed_runtime(entry_id: str, minutes: float) -> None:
+def _auto_state(coordinator) -> dict:
+    state = _state(coordinator)
+    if state.auto is None:
+        state.auto = _fresh_auto_state()
+    return state.auto
+
+
+def auto_seed_runtime(coordinator, minutes: float) -> None:
     """Restore today's accumulated minutes from the sensor's stored state."""
-    st = _AUTO.setdefault(entry_id, _fresh_auto_state())
+    st = _auto_state(coordinator)
     st["runtime_today"] = max(st["runtime_today"], float(minutes))
 
 
@@ -439,7 +471,7 @@ def _fresh_auto_state() -> dict:
 
 async def async_auto_enable(hass: HomeAssistant, coordinator, entry_id: str) -> None:
     """Arm the auto controller: tick now, then every AUTO_TICK_SECONDS."""
-    st = _AUTO.setdefault(entry_id, _fresh_auto_state())
+    st = _auto_state(coordinator)
     if st["unsub"] is not None:
         return
 
@@ -448,31 +480,46 @@ async def async_auto_enable(hass: HomeAssistant, coordinator, entry_id: str) -> 
             await _auto_tick(hass, coordinator, entry_id)
 
     st["unsub"] = async_track_time_interval(hass, _tick, timedelta(seconds=AUTO_TICK_SECONDS))
+    state = _state(coordinator)
+    config_entry = getattr(coordinator, "config_entry", None)
+    if not state.unload_hooked and config_entry is not None:
+        # Safety net: if the entry goes away without async_stop_auto having
+        # run, the periodic tick must not keep firing against it.
+        state.unload_hooked = True
+        config_entry.async_on_unload(lambda: _drop_auto_tick(coordinator))
     _LOGGER.info("solar dump auto: enabled for %s", entry_id)
     await _tick(None)
 
 
-async def async_auto_disable(hass: HomeAssistant, entry_id: str) -> None:
-    """Disarm the auto controller and stop a burst it owns."""
-    st = _AUTO.get(entry_id)
+def _drop_auto_tick(coordinator) -> None:
+    """Cancel the periodic auto tick, if armed. Idempotent."""
+    st = _state(coordinator).auto
     if st and st["unsub"] is not None:
         st["unsub"]()
         st["unsub"] = None
-    if _OWNER.get(entry_id) == "auto":
-        await async_stop_for_entry(hass, entry_id)
+
+
+async def async_auto_disable(hass: HomeAssistant, coordinator) -> None:
+    """Disarm the auto controller and stop a burst it owns."""
+    state = _state(coordinator)
+    st = state.auto
+    _drop_auto_tick(coordinator)
+    if state.owner == "auto":
+        await async_stop_for_entry(hass, coordinator)
     if st:
         st["running"] = False
-    _LOGGER.info("solar dump auto: disabled for %s", entry_id)
+    _LOGGER.info("solar dump auto: disabled for %s", coordinator.entry_id)
 
 
-async def async_stop_auto(hass: HomeAssistant, entry_id: str) -> None:
+async def async_stop_auto(hass: HomeAssistant, coordinator) -> None:
     """Full teardown for async_unload_entry: disarm + drop state."""
-    await async_auto_disable(hass, entry_id)
-    _AUTO.pop(entry_id, None)
+    await async_auto_disable(hass, coordinator)
+    _state(coordinator).auto = None
 
 
 async def _auto_tick(hass: HomeAssistant, coordinator, entry_id: str) -> None:
-    st = _AUTO.setdefault(entry_id, _fresh_auto_state())
+    st = _auto_state(coordinator)
+    state = _state(coordinator)
     today = dt_util.now().date()
     if today != st["day"]:
         st["day"] = today
@@ -480,8 +527,8 @@ async def _auto_tick(hass: HomeAssistant, coordinator, entry_id: str) -> None:
 
     # Reconcile: derive "running" from the shared session, so a burst ended
     # by the in-burst safety net or by an unload is accounted for here too.
-    owns = _OWNER.get(entry_id) == "auto"
-    task = _RUNNING.get(entry_id)
+    owns = state.owner == "auto"
+    task = state.task
     running = owns and task is not None and not task.done()
     if st["running"] and not running and st["last_start"] is not None:
         st["runtime_today"] += (time.monotonic() - st["last_start"]) / 60
@@ -489,12 +536,12 @@ async def _auto_tick(hass: HomeAssistant, coordinator, entry_id: str) -> None:
     st["running"] = running
 
     # Hands off while a manual switch / the service is driving.
-    if _OWNER.get(entry_id) not in (None, "auto"):
+    if state.owner not in (None, "auto"):
         return
 
     if _in_legionella_hour(coordinator):
         if running:
-            await _auto_stop(hass, st, entry_id, "anti-legionella hour")
+            await _auto_stop(hass, coordinator, st, entry_id, "anti-legionella hour")
         return
 
     ecs = coordinator.data.get(DHW_TEMP_SLUG)
@@ -544,11 +591,15 @@ async def _auto_tick(hass: HomeAssistant, coordinator, entry_id: str) -> None:
     elif running and not want:
         min_run_ok = st["last_start"] is not None and now - st["last_start"] >= AUTO_MIN_RUN_SECONDS
         if hard_off or min_run_ok:
-            await _auto_stop(hass, st, entry_id, hard_off or f"dT exhausted ({dt:.1f})")
+            await _auto_stop(
+                hass, coordinator, st, entry_id, hard_off or f"dT exhausted ({dt:.1f})"
+            )
 
 
-async def _auto_stop(hass: HomeAssistant, st: dict, entry_id: str, reason: str) -> None:
-    await async_stop_for_entry(hass, entry_id)
+async def _auto_stop(
+    hass: HomeAssistant, coordinator, st: dict, entry_id: str, reason: str
+) -> None:
+    await async_stop_for_entry(hass, coordinator)
     if st["running"] and st["last_start"] is not None:
         st["runtime_today"] += (time.monotonic() - st["last_start"]) / 60
     st["running"] = False
@@ -562,29 +613,28 @@ async def _auto_stop(hass: HomeAssistant, st: dict, entry_id: str, reason: str) 
 
 async def async_register_services(hass: HomeAssistant) -> None:
     """Register plum_ecomax.solar_to_buffer once (idempotent)."""
-    global _STOP_UNSUB
-    if not hass.services.has_service(DOMAIN, SERVICE_SOLAR_TO_BUFFER):
+    if hass.services.has_service(DOMAIN, SERVICE_SOLAR_TO_BUFFER):
+        return
 
-        async def _service(call: ServiceCall) -> None:
-            await _handle_solar_to_buffer(hass, call)
+    async def _service(call: ServiceCall) -> None:
+        await _handle_solar_to_buffer(hass, call)
 
-        hass.services.async_register(
-            DOMAIN, SERVICE_SOLAR_TO_BUFFER, _service, schema=SOLAR_TO_BUFFER_SCHEMA
-        )
+    hass.services.async_register(
+        DOMAIN, SERVICE_SOLAR_TO_BUFFER, _service, schema=SOLAR_TO_BUFFER_SCHEMA
+    )
 
-    if _STOP_UNSUB is None:
 
-        async def _on_stop(_event) -> None:
-            await _async_stop_all(hass)
+def async_register_stop_listener(hass: HomeAssistant, entry, coordinator) -> None:
+    """On HA shutdown, stop this entry's session so the boiler is written back
+    to automatic. Unsubscribed with the entry (async_on_unload)."""
 
-        _STOP_UNSUB = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop)
+    async def _on_stop(_event) -> None:
+        await async_stop_for_entry(hass, coordinator)
+
+    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop))
 
 
 async def async_unregister_services(hass: HomeAssistant) -> None:
     """Drop the service when the last config entry unloads."""
-    global _STOP_UNSUB
     if not hass.config_entries.async_loaded_entries(DOMAIN):
         hass.services.async_remove(DOMAIN, SERVICE_SOLAR_TO_BUFFER)
-        if _STOP_UNSUB is not None:
-            _STOP_UNSUB()
-            _STOP_UNSUB = None

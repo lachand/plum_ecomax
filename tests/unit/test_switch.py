@@ -162,7 +162,7 @@ class TestManualModeBackedSwitch:
         with patch("custom_components.plum_ecomax.switch.async_stop_for_entry") as stop:
             await switch.async_turn_off()
 
-        stop.assert_awaited_once_with(coordinator.hass, "entryX")
+        stop.assert_awaited_once_with(coordinator.hass, coordinator)
         coordinator.async_set_value.assert_not_called()
 
 

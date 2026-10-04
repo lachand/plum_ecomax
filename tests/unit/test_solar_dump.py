@@ -22,7 +22,6 @@ from custom_components.plum_ecomax.const import (
     OPERATING_MODE_MANUAL,
 )
 from custom_components.plum_ecomax.solar_dump import (
-    _RUNNING,
     _handle_solar_to_buffer,
     async_start_hold,
     async_stop_for_entry,
@@ -81,8 +80,19 @@ class FakeCoordinator:
         self.data = data
 
 
+# Every coordinator built by a test, so the helpers below can find the
+# per-coordinator SolarDumpState (the session task lives there).
+_COORDS: list = []
+
+
 def _coord(device, **kw):
-    return FakeCoordinator(device, **kw)
+    coordinator = FakeCoordinator(device, **kw)
+    _COORDS.append(coordinator)
+    return coordinator
+
+
+def _running_tasks() -> list:
+    return [t for c in _COORDS if (t := solar_dump._state(c).task) is not None]
 
 
 def _make_hass(coordinators=None):
@@ -101,9 +111,9 @@ def _make_call(duration):
 
 @pytest.fixture(autouse=True)
 def _clear_running():
-    _RUNNING.clear()
+    _COORDS.clear()
     yield
-    _RUNNING.clear()
+    _COORDS.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -126,7 +136,7 @@ def _mock_issues():
 
 async def _run_service(hass, call):
     await _handle_solar_to_buffer(hass, call)
-    tasks = list(_RUNNING.values())
+    tasks = _running_tasks()
     for task in tasks:
         await task
 
@@ -144,7 +154,7 @@ async def test_no_coordinators_is_a_noop(caplog):
     hass = _make_hass()
     set_loaded_entries(hass, {})
     await _handle_solar_to_buffer(hass, _make_call(30))
-    assert not _RUNNING
+    assert not _running_tasks()
 
 
 @pytest.mark.asyncio
@@ -161,7 +171,7 @@ async def test_happy_path_writes_then_restores():
         ("hdwpumpforce", 0),
         ("operatingmode", OPERATING_MODE_AUTO),
     ]
-    assert not _RUNNING
+    assert not _running_tasks()
 
 
 @pytest.mark.asyncio
@@ -236,10 +246,10 @@ async def test_stop_for_entry_cancels_and_restores():
     with patch.object(solar_dump.asyncio, "sleep", _forever):
         await _handle_solar_to_buffer(hass, _make_call(30))
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
-        await async_stop_for_entry(hass, "e1")
+        await async_stop_for_entry(hass, _COORDS[0])
 
     assert dev.writes[-2:] == [("hdwpumpforce", 0), ("operatingmode", OPERATING_MODE_AUTO)]
-    assert not _RUNNING
+    assert not _running_tasks()
 
 
 @pytest.mark.asyncio
@@ -255,14 +265,14 @@ async def test_second_call_restarts_the_run():
     with patch.object(solar_dump.asyncio, "sleep", _forever):
         await _handle_solar_to_buffer(hass, _make_call(30))
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
-        first = next(iter(_RUNNING.values()))
+        first = _running_tasks()[0]
 
         await _handle_solar_to_buffer(hass, _make_call(30))
         await _wait_until(lambda: dev.writes.count(("hdwpumpforce", 512)) == 2)
-        second = next(iter(_RUNNING.values()))
+        second = _running_tasks()[0]
         assert first is not second
 
-        await async_stop_for_entry(hass, "e1")
+        await async_stop_for_entry(hass, _COORDS[0])
 
     # restore ran for the cancelled first run and again for the stopped second
     assert dev.writes.count(("operatingmode", OPERATING_MODE_AUTO)) >= 2
@@ -305,11 +315,11 @@ class TestSwitchHold:
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
         assert dev.writes == [("operatingmode", OPERATING_MODE_MANUAL), ("hdwpumpforce", 512)]
-        assert "e1" in _RUNNING
+        assert _running_tasks()
 
-        await async_stop_for_entry(hass, "e1")
+        await async_stop_for_entry(hass, _COORDS[0])
         assert dev.writes[-2:] == [("hdwpumpforce", 0), ("operatingmode", OPERATING_MODE_AUTO)]
-        assert not _RUNNING
+        assert not _running_tasks()
 
     @pytest.mark.asyncio
     async def test_on_when_already_manual_only_toggles_the_pump(self):
@@ -320,7 +330,7 @@ class TestSwitchHold:
 
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
-        await async_stop_for_entry(hass, "e1")
+        await async_stop_for_entry(hass, _COORDS[0])
 
         assert dev.writes == [("hdwpumpforce", 512), ("hdwpumpforce", 0)]
 
@@ -333,13 +343,13 @@ class TestSwitchHold:
 
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: ("hdwpumpforce", 512) in dev.writes)
-        first = _RUNNING["e1"]
+        first = _running_tasks()[0]
         await async_start_hold(hass, coord, "e1")
         await _wait_until(lambda: dev.writes.count(("hdwpumpforce", 512)) >= 2)
-        assert _RUNNING["e1"] is not first
-        await async_stop_for_entry(hass, "e1")
+        assert _running_tasks()[0] is not first
+        await async_stop_for_entry(hass, _COORDS[0])
 
-        assert not _RUNNING
+        assert not _running_tasks()
 
 
 class TestTemperatureGuardRails:

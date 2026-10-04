@@ -134,7 +134,7 @@ class PlumEconetSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         _LOGGER.info("Turning OFF %s (%s) -> %s", self._log_name, self._slug, self._off_value)
         if self._slug == MANUAL_MODE_BACKED:
-            await async_stop_for_entry(self.coordinator.hass, self._entry_id)
+            await async_stop_for_entry(self.coordinator.hass, self.coordinator)
             return
         await self.coordinator.async_set_value(self._slug, self._off_value)
 
@@ -177,4 +177,4 @@ class PlumSolarDumpAutoSwitch(CoordinatorEntity, RestoreEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._is_on = False
         self.async_write_ha_state()
-        await async_auto_disable(self.coordinator.hass, self._entry_id)
+        await async_auto_disable(self.coordinator.hass, self.coordinator)

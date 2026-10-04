@@ -16,7 +16,12 @@ import pytest
 
 from custom_components.plum_ecomax import solar_dump
 from custom_components.plum_ecomax.const import AUTO_MIN_REST_SECONDS, AUTO_MIN_RUN_SECONDS
-from custom_components.plum_ecomax.solar_dump import _AUTO, _OWNER, _RUNNING, _auto_tick
+from custom_components.plum_ecomax.solar_dump import SolarDumpState, _auto_tick
+
+# One shared state: the tests call _tick() with a fresh coordinator each time
+# but expect the controller's bookkeeping to carry over between ticks, so every
+# coordinator is pointed at this same SolarDumpState.
+_STATE = SolarDumpState()
 
 
 class Clock:
@@ -42,21 +47,19 @@ def _coord(ecs=60.0, buffer=40.0, *, target=55, floor=45, dt_start=8, budget=120
 @pytest.fixture
 def env():
     clk = Clock()
-    _AUTO.clear()
-    _OWNER.clear()
-    _RUNNING.clear()
+    _STATE.__init__()
     start = AsyncMock()
     stop = AsyncMock()
 
     async def _fake_start(hass, coordinator, entry_id, **kw):
-        _OWNER[entry_id] = "auto"
+        _STATE.owner = "auto"
         t = MagicMock()
         t.done.return_value = False
-        _RUNNING[entry_id] = t
+        _STATE.task = t
 
-    async def _fake_stop(hass, entry_id):
-        _OWNER.pop(entry_id, None)
-        _RUNNING.pop(entry_id, None)
+    async def _fake_stop(hass, coordinator):
+        _STATE.owner = None
+        _STATE.task = None
 
     start.side_effect = _fake_start
     stop.side_effect = _fake_stop
@@ -67,17 +70,16 @@ def env():
         patch.object(solar_dump.dt_util, "now", lambda: clk.wall),
     ):
         yield clk, start, stop
-    _AUTO.clear()
-    _OWNER.clear()
-    _RUNNING.clear()
+    _STATE.__init__()
 
 
 async def _tick(coord):
+    coord._solar_dump_state = _STATE
     await _auto_tick(MagicMock(), coord, "e1")
 
 
 def _running():
-    return _OWNER.get("e1") == "auto" and "e1" in _RUNNING
+    return _STATE.owner == "auto" and _STATE.task is not None
 
 
 @pytest.mark.asyncio
@@ -148,8 +150,8 @@ async def test_min_rest_blocks_an_immediate_restart(env):
 @pytest.mark.asyncio
 async def test_daily_budget_caps_bursts(env):
     _clk, start, _stop = env
-    _AUTO["e1"] = solar_dump._fresh_auto_state()
-    _AUTO["e1"]["runtime_today"] = 130  # over the 120 default
+    _STATE.auto = solar_dump._fresh_auto_state()
+    _STATE.auto["runtime_today"] = 130  # over the 120 default
     await _tick(_coord(ecs=70, buffer=40, budget=120))
     start.assert_not_awaited()
 
@@ -157,8 +159,8 @@ async def test_daily_budget_caps_bursts(env):
 @pytest.mark.asyncio
 async def test_tick_is_a_noop_when_someone_else_owns_the_session(env):
     _clk, start, stop = env
-    _OWNER["e1"] = "manual"
-    _RUNNING["e1"] = MagicMock()
+    _STATE.owner = "manual"
+    _STATE.task = MagicMock()
     await _tick(_coord(ecs=70, buffer=40))
     start.assert_not_awaited()
     stop.assert_not_awaited()
@@ -189,17 +191,18 @@ async def test_runtime_accumulates_across_a_burst(env):
     clk, _start, _stop = env
     await _tick(_coord(ecs=60, buffer=40))
     clk.advance(600)  # 10 min
-    await _tick(_coord(ecs=48, buffer=49))  # normal stop (MIN_RUN satisfied)
-    assert 9.5 <= _AUTO["e1"]["runtime_today"] <= 10.5
-    assert 9.5 <= solar_dump.auto_runtime_minutes("e1") <= 10.5
+    c = _coord(ecs=48, buffer=49)
+    await _tick(c)  # normal stop (MIN_RUN satisfied)
+    assert 9.5 <= _STATE.auto["runtime_today"] <= 10.5
+    assert 9.5 <= solar_dump.auto_runtime_minutes(c) <= 10.5
 
 
 @pytest.mark.asyncio
 async def test_midnight_rollover_resets_runtime(env):
     clk, _s, _st = env
-    _AUTO["e1"] = solar_dump._fresh_auto_state()
-    _AUTO["e1"]["runtime_today"] = 90
-    _AUTO["e1"]["day"] = clk.wall.date()
+    _STATE.auto = solar_dump._fresh_auto_state()
+    _STATE.auto["runtime_today"] = 90
+    _STATE.auto["day"] = clk.wall.date()
     clk.advance(86400)  # next day
     await _tick(_coord(ecs=45, buffer=44))  # any tick
-    assert _AUTO["e1"]["runtime_today"] == 0.0
+    assert _STATE.auto["runtime_today"] == 0.0

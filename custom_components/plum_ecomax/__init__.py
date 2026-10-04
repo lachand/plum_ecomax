@@ -20,6 +20,7 @@ from .plum_device import DEVICE_MAP_PATH, PlumDevice
 from .schedule import async_register_services as async_register_schedule_service
 from .schedule import async_unregister_services as async_unregister_schedule_service
 from .solar_dump import async_register_services as async_register_solar_dump_service
+from .solar_dump import async_register_stop_listener as async_register_solar_dump_stop
 from .solar_dump import async_stop_auto as async_stop_solar_dump_auto
 from .solar_dump import async_stop_for_entry as async_stop_solar_dump
 from .solar_dump import async_unregister_services as async_unregister_solar_dump_service
@@ -113,6 +114,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlumConfigEntry):
 
     entry.runtime_data = coordinator
     _adopt_serial_unique_id(hass, entry, coordinator)
+    async_register_solar_dump_stop(hass, entry, coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_register_schedule_service(hass)
@@ -134,8 +136,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: PlumConfigEntry):
         # Disarm the auto controller, then stop any in-flight solar_to_buffer
         # run and let it write the boiler back to automatic BEFORE the socket
         # below is closed -- otherwise the boiler could be left in manual mode.
-        await async_stop_solar_dump_auto(hass, entry.entry_id)
-        await async_stop_solar_dump(hass, entry.entry_id)
+        await async_stop_solar_dump_auto(hass, entry.runtime_data)
+        await async_stop_solar_dump(hass, entry.runtime_data)
         coordinator = entry.runtime_data
         # PlumDevice now keeps its TCP connection open across transactions
         # (persistent connection) instead of closing it after every one --

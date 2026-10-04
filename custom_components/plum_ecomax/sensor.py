@@ -298,8 +298,8 @@ class PlumSolarDumpRuntimeSensor(CoordinatorEntity, RestoreSensor, SensorEntity)
         last = await self.async_get_last_sensor_data()
         if last is not None and last.native_value is not None:
             with contextlib.suppress(TypeError, ValueError):
-                auto_seed_runtime(self._entry_id, float(last.native_value))
+                auto_seed_runtime(self.coordinator, float(last.native_value))
 
     @property
     def native_value(self) -> float:
-        return auto_runtime_minutes(self._entry_id)
+        return auto_runtime_minutes(self.coordinator)
