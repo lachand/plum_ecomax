@@ -678,3 +678,25 @@ class TestWriteSkippedWhenUnchanged:
         await coordinator.async_set_value("x", 22.5)
         device.get_values.assert_not_awaited()
         device.set_value.assert_awaited()
+
+
+class TestLinkGraceCounter:
+    @pytest.mark.asyncio
+    async def test_cycle_with_nothing_to_read_keeps_the_failure_count(self):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(return_value={})
+        coordinator = _make_coordinator(
+            device=device,
+            available_slugs=["buforlongloadtime"],
+            cache={"buforlongloadtime": 1},
+            timestamps={"buforlongloadtime": time.time()},
+        )
+        coordinator.data = {"buforlongloadtime": 1}
+        coordinator._failed_cycles = 1
+
+        await (
+            coordinator._async_update_data()
+        )  # "buforlongloadtime" is static and fresh: nothing fetched
+
+        assert coordinator._failed_cycles == 1

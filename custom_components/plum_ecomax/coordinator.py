@@ -226,7 +226,8 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
                     self._update_connection_issue()
                     return dict(self.data or {})
                 self._link_lost(len(to_fetch), read_error)
-        self._failed_cycles = 0
+        if to_fetch:  # a cycle that read nothing proves nothing about the link
+            self._failed_cycles = 0
         if self._link_down:
             _LOGGER.info("Communication with the boiler restored")
             self._link_down = False
