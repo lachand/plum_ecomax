@@ -602,3 +602,79 @@ class TestNothingDetectedAtStartup:
 
         with pytest.raises(UpdateFailed):
             await coordinator._async_update_data()
+
+
+class TestLinkGrace:
+    """A cycle the module ignores keeps the last data for LINK_GRACE_CYCLES cycles."""
+
+    @pytest.mark.asyncio
+    async def test_blip_keeps_last_data_then_fails_then_recovers(self):
+        from custom_components.plum_ecomax.coordinator import LINK_GRACE_CYCLES
+
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(return_value={})
+        coordinator = _make_coordinator(
+            device=device, available_slugs=["tempcwu"], cache={"tempcwu": 42}
+        )
+        coordinator.data = {"tempcwu": 42}
+
+        for _ in range(LINK_GRACE_CYCLES):
+            assert await coordinator._async_update_data() == {"tempcwu": 42}
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+
+        device.get_values = AsyncMock(return_value={"tempcwu": 43})
+        assert (await coordinator._async_update_data())["tempcwu"] == 43
+        assert coordinator._failed_cycles == 0
+
+    @pytest.mark.asyncio
+    async def test_first_refresh_gets_no_grace(self):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(return_value={})
+        coordinator = _make_coordinator(device=device, available_slugs=["tempcwu"])
+        coordinator.data = None
+
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+
+
+class TestWriteSkippedWhenUnchanged:
+    """An identical write is not sent when a fresh read shows the boiler has it."""
+
+    @staticmethod
+    def _coordinator(cached, fresh):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.last_write_error = None
+        device.get_values = AsyncMock(return_value=fresh)
+        device.set_value = AsyncMock(return_value=True)
+        coordinator = _make_coordinator(device=device, available_slugs=["x"], cache={"x": cached})
+        coordinator.async_set_updated_data = MagicMock()
+        return coordinator, device
+
+    @pytest.mark.asyncio
+    async def test_same_value_confirmed_by_fresh_read_is_skipped(self):
+        coordinator, device = self._coordinator(22.5, {"x": 22.5})
+        assert await coordinator.async_set_value("x", 22.5) is True
+        device.set_value.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_stale_cache_is_written(self):
+        coordinator, device = self._coordinator(22.5, {"x": 20.0})
+        await coordinator.async_set_value("x", 22.5)
+        device.set_value.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_failed_check_read_still_writes(self):
+        coordinator, device = self._coordinator(22.5, {})
+        await coordinator.async_set_value("x", 22.5)
+        device.set_value.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_different_value_does_not_read_first(self):
+        coordinator, device = self._coordinator(20.0, {"x": 20.0})
+        await coordinator.async_set_value("x", 22.5)
+        device.get_values.assert_not_awaited()
+        device.set_value.assert_awaited()

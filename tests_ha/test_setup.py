@@ -13,6 +13,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.plum_ecomax import async_remove_config_entry_device
+from custom_components.plum_ecomax.coordinator import LINK_GRACE_CYCLES
 from tests_ha.fakes import DOMAIN, ENTRY_DATA, IP, SERIAL, FakePlumDevice
 
 
@@ -120,6 +121,10 @@ async def test_entities_go_unavailable_during_an_outage_and_recover(hass):
     base = coordinator.update_interval
 
     FakePlumDevice.link_up = False
+    for _ in range(LINK_GRACE_CYCLES):  # a short blip keeps the last values
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+        assert hass.states.get(state_id).state != "unavailable"
     await coordinator.async_refresh()
     await hass.async_block_till_done()
     assert hass.states.get(state_id).state == "unavailable"

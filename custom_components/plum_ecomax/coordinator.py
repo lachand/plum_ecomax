@@ -58,9 +58,25 @@ CONNECTION_LOST_THRESHOLD = 3
 WRITE_ATTEMPTS = 2
 WRITE_RETRY_DELAY = 2.0
 
+# The ecoNET module sometimes ignores a whole poll cycle (it drops requests while
+# it sends its own bursts). A cycle that reads nothing therefore keeps serving the
+# last data for up to LINK_GRACE_CYCLES cycles in a row before the entities go
+# unavailable: a blip no longer flaps every entity nor fails the actions that run
+# during it. Only applies once data exists (the first refresh still fails at once).
+LINK_GRACE_CYCLES = 2
+
 # coordinator.data: slug -> decoded value. The keys are the parameter slugs of
 # the device map (dynamic), so a TypedDict can't describe them.
 PlumData = dict[str, Any]
+
+
+def _same_value(a: Any, b: Any) -> bool:
+    """Equality that tolerates the float round-trip of scaled values."""
+    if a is None or b is None or isinstance(a, bool) != isinstance(b, bool):
+        return False
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return abs(a - b) < 1e-6
+    return bool(a == b)
 
 
 class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
@@ -76,6 +92,9 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
     # True while the boiler is unreachable -- lets the outage be logged once
     # on the way down and once on recovery instead of every cycle.
     _link_down: bool = False
+    # Consecutive cycles that read nothing, while the grace period still serves
+    # the previous data (see LINK_GRACE_CYCLES).
+    _failed_cycles: int = 0
     # The configured polling interval, remembered while update_interval is
     # stretched during an outage (see _stretch_interval).
     _base_interval: timedelta | None = None
@@ -197,7 +216,17 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
             # unavailable (and first refresh raises ConfigEntryNotReady)
             # rather than serving stale cache indefinitely.
             if read_error is not None or not any(v is not None for v in raw_values.values()):
+                if getattr(self, "data", None) and self._failed_cycles < LINK_GRACE_CYCLES:
+                    self._failed_cycles += 1
+                    _LOGGER.debug(
+                        "Boiler did not answer (cycle %d/%d); keeping the last data",
+                        self._failed_cycles,
+                        LINK_GRACE_CYCLES,
+                    )
+                    self._update_connection_issue()
+                    return dict(self.data or {})
                 self._link_lost(len(to_fetch), read_error)
+        self._failed_cycles = 0
         if self._link_down:
             _LOGGER.info("Communication with the boiler restored")
             self._link_down = False
@@ -305,6 +334,10 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
             HomeAssistantError: The boiler did not confirm the write
                 ("write_failed"), or explicitly rejected it ("write_rejected").
         """
+        if await self._boiler_already_has(slug, value):
+            _LOGGER.debug("%s is already %s on the boiler; write skipped", slug, value)
+            return True
+
         # 1. Optimistic Cache Update (Immediate)
         async with self._cache_lock:
             previous_val = self._cache.get(slug)
@@ -323,6 +356,24 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
             self._revert_optimistic(slug, previous_val)
             raise
         return True
+
+    async def _boiler_already_has(self, slug: str, value: Any) -> bool:
+        """True when the boiler itself, read just now, already holds `value`.
+
+        Automations often re-send the setpoint they set a minute ago. Every write is
+        a request the module may drop and a write to the boiler's memory, so an
+        identical one is skipped -- but only on a fresh read (the cache can be stale
+        for the static parameters). A failed read means "unknown": write anyway.
+        """
+        async with self._cache_lock:
+            cached = self._cache.get(slug)
+        if not _same_value(cached, value):
+            return False
+        try:
+            fresh = await self.device.get_values([slug], retries=1)
+        except Exception:  # any failure just means "send the write"
+            return False
+        return slug in fresh and _same_value(fresh[slug], value)
 
     def _revert_optimistic(self, slug: str, previous_val: Any) -> None:
         """Put back what was cached before an optimistic write, and mark the slug

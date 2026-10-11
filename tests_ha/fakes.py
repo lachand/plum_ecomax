@@ -62,6 +62,7 @@ class FakePlumDevice(PlumDevice):
         if not FakePlumDevice.link_up:
             return False
         self.writes.append((slug, value))
+        FakePlumDevice.values[slug] = value  # the boiler now holds what was written
         return True
 
     async def async_close(self) -> None:

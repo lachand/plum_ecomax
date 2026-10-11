@@ -60,6 +60,7 @@ async def test_climate_setpoint_and_hvac_mode(hass):
 
 
 async def test_configuration_switches_write_their_on_and_off_values(hass):
+    FakePlumDevice.values["hdwstartlegion"] = 0  # off at start, so "on" is a real change
     _, device = await _loaded(hass)
 
     await _call(hass, "switch", "turn_on", {"entity_id": "switch.dhw_anti_legionella_cycle"})
@@ -185,3 +186,13 @@ async def test_set_schedule_for_an_inactive_circuit_is_a_validation_error(hass):
 
     assert err.value.translation_key == "circuit_not_active"
     assert not device.writes
+
+
+async def test_identical_write_is_not_sent_twice(hass):
+    _, device = await _loaded(hass)
+    entity = "climate.circuit_2_thermostat"
+
+    await _call(hass, "climate", "set_temperature", {"entity_id": entity, "temperature": 21.5})
+    await _call(hass, "climate", "set_temperature", {"entity_id": entity, "temperature": 21.5})
+
+    assert len(_written(device, "circuit2comforttemp")) == 1  # the second call found it already set
