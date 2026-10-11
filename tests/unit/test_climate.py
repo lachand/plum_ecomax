@@ -15,7 +15,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import HVACAction, HVACMode
 
 from custom_components.plum_ecomax.climate import PlumEcomaxClimate
 from custom_components.plum_ecomax.const import CLIMATE_TYPES
@@ -110,3 +110,24 @@ class _AllKeysContainer:
 
     def __contains__(self, _key):
         return True
+
+
+class TestHvacAction:
+    def test_heating_while_the_mixing_valve_is_open(self):
+        entity = _make_climate({"circuit2active": 1, "mixer2valveposition": 33.3})
+        assert entity.hvac_action == HVACAction.HEATING
+
+    def test_idle_when_the_valve_is_closed(self):
+        entity = _make_climate({"circuit2active": 1, "mixer2valveposition": 0.0})
+        assert entity.hvac_action == HVACAction.IDLE
+
+    def test_off_when_the_circuit_is_off(self):
+        entity = _make_climate({"circuit2active": 0, "mixer2valveposition": 50.0})
+        assert entity.hvac_action == HVACAction.OFF
+
+    def test_unknown_without_a_valve_position(self):
+        assert _make_climate({"circuit2active": 1}).hvac_action is None
+        assert (
+            _make_climate({"circuit2active": 1, "mixer2valveposition": float("nan")}).hvac_action
+            is None
+        )

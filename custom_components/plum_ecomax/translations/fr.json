@@ -212,8 +212,44 @@
             "consecutive_failures": {
                 "name": "Échecs de communication consécutifs"
             },
+            "failed_requests_hour": {
+                "name": "Requêtes sans réponse (dernière heure)"
+            },
+            "poll_duration": {
+                "name": "Durée du cycle de lecture"
+            },
             "circulationstate": {
                 "name": "État circulation ECS (brut)"
+            },
+            "circuit1pumpdebug": {
+                "name": "Pompe (brut)"
+            },
+            "circuit1calctemp": {
+                "name": "Température calculée"
+            },
+            "circuit2pumpdebug": {
+                "name": "Pompe (brut)"
+            },
+            "circuit2calctemp": {
+                "name": "Température calculée"
+            },
+            "circuit3pumpdebug": {
+                "name": "Pompe (brut)"
+            },
+            "circuit3calctemp": {
+                "name": "Température calculée"
+            },
+            "circuit6pumpdebug": {
+                "name": "Pompe (brut)"
+            },
+            "circuit6calctemp": {
+                "name": "Température calculée"
+            },
+            "circuit7pumpdebug": {
+                "name": "Pompe (brut)"
+            },
+            "circuit7calctemp": {
+                "name": "Température calculée"
             },
             "solar_dump_runtime_today": {
                 "name": "Décharge solaire — temps circulateur aujourd'hui"

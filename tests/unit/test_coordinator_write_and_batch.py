@@ -60,6 +60,8 @@ def _make_coordinator(
     coordinator = object.__new__(PlumDataUpdateCoordinator)
     coordinator.device = device if device is not None else MagicMock()
     coordinator._delta_rejection_counts = {}  # normally set by __init__
+    coordinator._write_generation = {}
+    coordinator._write_origin = {}
     # config_entry.async_create_background_task schedules the repeated-write
     # coroutine; here just run it on the loop so the existing assertions
     # (which await afterwards) still observe its effects.
@@ -700,3 +702,75 @@ class TestLinkGraceCounter:
         )  # "buforlongloadtime" is static and fresh: nothing fetched
 
         assert coordinator._failed_cycles == 1
+
+
+class TestWriteMerging:
+    """Writes to one parameter that follow each other closely are merged."""
+
+    @staticmethod
+    def _coordinator():
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.last_write_error = None
+        device.get_values = AsyncMock(return_value={})
+        device.set_value = AsyncMock(return_value=True)
+        coordinator = _make_coordinator(device=device, available_slugs=["x"], cache={"x": 20.0})
+        coordinator.async_set_updated_data = MagicMock()
+        return coordinator, device
+
+    @pytest.mark.asyncio
+    async def test_rapid_writes_send_only_the_last_value(self, monkeypatch):
+        coordinator, device = self._coordinator()
+        gate = asyncio.Event()
+        real_sleep = asyncio.tasks.sleep  # the package-level one is patched by the autouse fixture
+
+        async def sleep(_seconds):  # all three calls get to register before any sends
+            await gate.wait()
+
+        monkeypatch.setattr("custom_components.plum_ecomax.coordinator.asyncio.sleep", sleep)
+        tasks = [
+            asyncio.ensure_future(coordinator.async_set_value("x", v)) for v in (20.5, 21.0, 21.5)
+        ]
+        await real_sleep(0)
+        await real_sleep(0)
+        gate.set()
+        assert await asyncio.gather(*tasks) == [True, True, True]
+
+        device.set_value.assert_awaited_once_with("x", 21.5)
+
+    @pytest.mark.asyncio
+    async def test_a_failed_merged_write_restores_the_value_before_the_burst(self, monkeypatch):
+        coordinator, device = self._coordinator()
+        device.set_value = AsyncMock(return_value=False)
+        gate = asyncio.Event()
+        real_sleep = asyncio.tasks.sleep  # the package-level one is patched by the autouse fixture
+
+        async def sleep(_seconds):
+            await gate.wait()
+
+        monkeypatch.setattr("custom_components.plum_ecomax.coordinator.asyncio.sleep", sleep)
+        first = asyncio.ensure_future(coordinator.async_set_value("x", 20.5))
+        second = asyncio.ensure_future(coordinator.async_set_value("x", 21.0))
+        await real_sleep(0)
+        await real_sleep(0)
+        gate.set()
+        results = await asyncio.gather(first, second, return_exceptions=True)
+
+        assert results[0] is True  # superseded: nothing of its own to fail
+        assert isinstance(results[1], HomeAssistantError)
+        assert coordinator._cache["x"] == 20.0  # not the 20.5 an earlier call left behind
+
+
+class TestPollDuration:
+    @pytest.mark.asyncio
+    async def test_the_cycle_duration_is_recorded_even_when_it_fails(self):
+        device = MagicMock()
+        device.consecutive_failures = 0
+        device.get_values = AsyncMock(return_value={})
+        coordinator = _make_coordinator(device=device, available_slugs=["tempcwu"])
+        coordinator.data = None
+
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+
+        assert coordinator.last_poll_seconds is not None and coordinator.last_poll_seconds >= 0

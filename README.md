@@ -108,15 +108,15 @@ Developed and tested against a **Plum ecoMAX 360i** through its **ecoNET** netwo
 
 | Platform | What you get |
 |---|---|
-| Sensor | Temperatures, power, circuit names, serial number (on the device page), link health ("last communication", "consecutive failures"), circulator runtime today |
+| Sensor | Temperatures, power, circuit names, serial number (on the device page), link health ("last communication", "consecutive failures", "failed requests (last hour)", "poll duration"), circulator runtime today |
 | Binary sensor | "Manual mode active", coarse alarm-bit indicators |
 | Number | Setpoints, heating curves, cooling bounds, DHW circulation timing, solar-dump thresholds |
 | Switch | Manual mode, DHW anti-legionella cycle, DHW reload, **DHW pump → Solar buffer**, solar-dump automatic mode |
-| Select / Water heater / Climate | DHW mode, DHW tank, one thermostat per active circuit |
+| Select / Water heater / Climate | DHW mode, DHW tank, one thermostat per active circuit (it reports *heating* while the circuit's mixing valve is open, *idle* otherwise) |
 | Calendar | Weekly comfort/eco program per circuit and for DHW |
 | Button | Save / restore a reference snapshot of the curve and DHW configuration |
 
-Two actions are registered: **`plum_ecomax.set_schedule`** (rewrite a weekly program) and **`plum_ecomax.solar_to_buffer`** (timed DHW → buffer transfer). Both are described in `services.yaml` and shown in Developer tools → Actions. They are registered once when the integration is set up and fail with a clear message when nothing can be done (no boiler loaded, a circuit that is not active, a schedule the boiler does not expose). Every command that changes a boiler setting waits for the boiler's confirmation: if it never confirms, the previous value is restored and the action reports *"The boiler did not confirm writing …"* (or *"rejected"* with the boiler's code). Writing a value the boiler already holds (checked with a fresh read) is skipped, so an automation that re-sends its setpoint every few minutes causes no needless writes.
+Two actions are registered: **`plum_ecomax.set_schedule`** (rewrite a weekly program) and **`plum_ecomax.solar_to_buffer`** (timed DHW → buffer transfer). Both are described in `services.yaml` and shown in Developer tools → Actions. They are registered once when the integration is set up and fail with a clear message when nothing can be done (no boiler loaded, a circuit that is not active, a schedule the boiler does not expose). Every command that changes a boiler setting waits for the boiler's confirmation: if it never confirms, the previous value is restored and the action reports *"The boiler did not confirm writing …"* (or *"rejected"* with the boiler's code). Writing a value the boiler already holds (checked with a fresh read) is skipped, so an automation that re-sends its setpoint every few minutes causes no needless writes. Several writes to the same setting within a fraction of a second (a few clicks on a "+" button) are merged: only the last value is sent.
 
 ## Data updates
 
@@ -147,6 +147,15 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 ## Development
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
+
+### Upgrading to 1.1.0
+
+No entity to reconfigure. Behaviour changes:
+
+* **A short outage no longer makes everything unavailable.** When a poll cycle gets no answer (the module drops requests while it sends its own bursts), the last values are kept for up to two cycles in a row; only a longer outage turns entities *unavailable*.
+* **Identical writes are skipped.** Setting a value the boiler already holds (confirmed by a fresh read) sends nothing, and rapid successive writes to the same setting are merged into the last one. A write call now takes a fraction of a second longer to start.
+* **The circuit thermostat reports `hvac_action`**: *heating* while the circuit's mixing valve is open, *idle* when closed, *off* when the circuit is off.
+* **New diagnostic sensors:** "failed requests (last hour)" and "poll duration" (to tell a flapping link from a dead one), and, disabled by default, a raw "pump" register and a "calculated temperature" per circuit (what they hold is not documented by the manufacturer; they are there for troubleshooting). Restart Home Assistant after updating.
 
 ### Upgrading to 1.0.0
 

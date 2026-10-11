@@ -317,6 +317,18 @@ SENSOR_TYPES: dict[str, list[Any]] = {
     # DHW circulation pump state (DP_INVENTORY.md "Circulation ECS") -- raw
     # register, meaning of the bits undocumented, so kept as a diagnostic int.
     "circulationstate": [None, "mdi:pump", None],
+    # Per-circuit pump register and the temperature the controller computes for the
+    # circuit. What exactly they hold is not documented: diagnostic, disabled by default.
+    "circuit1pumpdebug": [None, "mdi:pump", None],
+    "circuit1calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
+    "circuit2pumpdebug": [None, "mdi:pump", None],
+    "circuit2calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
+    "circuit3pumpdebug": [None, "mdi:pump", None],
+    "circuit3calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
+    "circuit6pumpdebug": [None, "mdi:pump", None],
+    "circuit6calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
+    "circuit7pumpdebug": [None, "mdi:pump", None],
+    "circuit7calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
 }
 
 # SENSOR_TYPES slugs shown in the device's "Diagnostic" section instead of
@@ -329,6 +341,16 @@ DIAGNOSTIC_SENSOR_SLUGS = {
     "workstate3",
     "workstate4",
     "circulationstate",
+    "circuit1pumpdebug",
+    "circuit1calctemp",
+    "circuit2pumpdebug",
+    "circuit2calctemp",
+    "circuit3pumpdebug",
+    "circuit3calctemp",
+    "circuit6pumpdebug",
+    "circuit6calctemp",
+    "circuit7pumpdebug",
+    "circuit7calctemp",
 }
 
 # --- THERMOSTATS ---

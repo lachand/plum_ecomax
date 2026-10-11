@@ -58,6 +58,10 @@ CONNECTION_LOST_THRESHOLD = 3
 WRITE_ATTEMPTS = 2
 WRITE_RETRY_DELAY = 2.0
 
+# Writes to the same parameter that follow each other faster than this (a few clicks on
+# a "+" button) are merged: only the last value is sent, the earlier calls return at once.
+WRITE_DEBOUNCE = 0.4
+
 # The ecoNET module sometimes ignores a whole poll cycle (it drops requests while
 # it sends its own bursts). A cycle that reads nothing therefore keeps serving the
 # last data for up to LINK_GRACE_CYCLES cycles in a row before the entities go
@@ -95,6 +99,8 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
     # Consecutive cycles that read nothing, while the grace period still serves
     # the previous data (see LINK_GRACE_CYCLES).
     _failed_cycles: int = 0
+    # Duration of the last poll cycle in seconds (None before the first one).
+    last_poll_seconds: float | None = None
     # The configured polling interval, remembered while update_interval is
     # stretched during an outage (see _stretch_interval).
     _base_interval: timedelta | None = None
@@ -152,6 +158,10 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
         # Consecutive max_delta rejections per slug -- see
         # MAX_DELTA_REJECTIONS above for why this exists.
         self._delta_rejection_counts: dict[str, int] = {}
+        # Write merging (see WRITE_DEBOUNCE): per slug, how many writes were requested
+        # (the latest one wins) and the value the boiler held before the first of them.
+        self._write_generation: dict[str, int] = {}
+        self._write_origin: dict[str, Any] = {}
 
         super().__init__(
             hass,
@@ -162,6 +172,14 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
         )
 
     async def _async_update_data(self) -> PlumData:
+        """One poll cycle, timed (the duration is a diagnostic sensor)."""
+        started = time.monotonic()
+        try:
+            return await self._poll_cycle()
+        finally:
+            self.last_poll_seconds = time.monotonic() - started
+
+    async def _poll_cycle(self) -> PlumData:
         """Main update loop with Validation and Fallback.
 
         Returns:
@@ -341,21 +359,35 @@ class PlumDataUpdateCoordinator(DataUpdateCoordinator[PlumData]):
 
         # 1. Optimistic Cache Update (Immediate)
         async with self._cache_lock:
-            previous_val = self._cache.get(slug)
+            # The value to restore on failure is the one before the first write of a
+            # burst, not the optimistic value an earlier, merged call left behind.
+            self._write_origin.setdefault(slug, self._cache.get(slug))
+            previous_val = self._write_origin[slug]
             self._cache[slug] = value
             self._timestamps[slug] = time.time()
+            generation = self._write_generation.get(slug, 0) + 1
+            self._write_generation[slug] = generation
 
         # Notify Home Assistant immediately
         self.async_set_updated_data(self._cache)
         _LOGGER.info("Optimistic set for %s=%s. Sending.", slug, value)
 
         try:
+            await asyncio.sleep(WRITE_DEBOUNCE)
+            if self._write_generation.get(slug) != generation:
+                _LOGGER.debug("Write %s=%s superseded by a newer one", slug, value)
+                return True
             await self._perform_repeated_write(slug, value, previous_val)
         except asyncio.CancelledError:
             # The caller went away mid-write (e.g. the entry is unloading): don't
             # leave a value the boiler may never have applied in the cache.
-            self._revert_optimistic(slug, previous_val)
+            if self._write_generation.get(slug) == generation:
+                self._revert_optimistic(slug, previous_val)
             raise
+        finally:
+            if self._write_generation.get(slug) == generation:
+                self._write_generation.pop(slug, None)
+                self._write_origin.pop(slug, None)
         return True
 
     async def _boiler_already_has(self, slug: str, value: Any) -> bool:

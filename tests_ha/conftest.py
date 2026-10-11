@@ -32,6 +32,12 @@ def _enable_custom_integrations(enable_custom_integrations):
 
 
 @pytest.fixture(autouse=True)
+def _no_write_debounce(monkeypatch):
+    """Writes wait a moment so rapid ones can merge; the tests don't need the wait."""
+    monkeypatch.setattr("custom_components.plum_ecomax.coordinator.WRITE_DEBOUNCE", 0)
+
+
+@pytest.fixture(autouse=True)
 def fake_device(request):
     """Route both the entry setup and the config-flow probe to FakePlumDevice
     (except for tests marked `live`, which talk to the real boiler)."""

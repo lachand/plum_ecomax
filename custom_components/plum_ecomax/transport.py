@@ -12,6 +12,7 @@ and parsing live in protocol.py (pure functions); what the frames mean
 import asyncio
 import logging
 import time
+from collections import deque
 from collections.abc import Callable
 
 from .protocol import START_BYTE, Frame, pop_valid_frame
@@ -27,6 +28,9 @@ CONNECT_TIMEOUT = 5.0
 MAX_RESPONSE_BUFFER = 64 * 1024
 # Bytes kept when trimming: more than the largest frame (l_val <= 4096).
 _KEEP_TAIL = 8192
+
+# How many recent failure timestamps are remembered (more than an hour of a bad link).
+FAILURE_HISTORY = 500
 
 
 class PlumTransport:
@@ -47,6 +51,18 @@ class PlumTransport:
         # Wall-clock time of the last transaction that got a valid response
         # (None until the first one). Surfaced as a diagnostic sensor.
         self.last_success_ts: float | None = None
+        # Wall-clock times of recent failed transactions (bounded), to tell a
+        # healthy link from one that keeps dropping requests. See failures_within.
+        self._failure_times: deque[float] = deque(maxlen=FAILURE_HISTORY)
+
+    def _record_failure(self) -> None:
+        self.consecutive_failures += 1
+        self._failure_times.append(time.time())
+
+    def failures_within(self, seconds: float) -> int:
+        """Failed transactions (connect error or no answer in time) in the last `seconds`."""
+        cutoff = time.time() - seconds
+        return sum(1 for t in self._failure_times if t >= cutoff)
 
     async def ensure_connection(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         """Returns the persistent connection, opening a fresh one if needed."""
@@ -131,7 +147,7 @@ class PlumTransport:
             except OSError as e:  # includes TimeoutError
                 logger.debug("Connect failed (attempt %d/2): %s", attempt, e)
                 self.close()
-                self.consecutive_failures += 1
+                self._record_failure()
                 if attempt == 2:
                     return None
                 continue
@@ -154,14 +170,14 @@ class PlumTransport:
                 # about a second on this module. A second consecutive failure
                 # means the connection itself is suspect (half-open): drop it.
                 # No inline retry either (see docstring).
-                self.consecutive_failures += 1
+                self._record_failure()
                 if self.consecutive_failures >= 2:
                     self.close()
                 return None
             except OSError as e:
                 logger.debug("Transaction failed (attempt %d/2): %s", attempt, e)
                 self.close()
-                self.consecutive_failures += 1
+                self._record_failure()
                 if attempt == 2:
                     return None
                 continue

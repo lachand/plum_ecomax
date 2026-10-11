@@ -45,6 +45,17 @@ class TestAsyncTimeouts:
         # so the connection is kept rather than paying a ~1 s reconnection.
         assert not stream.closed and device._writer is not None
 
+    async def test_failures_are_counted_over_a_time_window(self, monkeypatch):
+        device = _make_transport()
+        _install_open_connection(monkeypatch, lambda: _HangingStream())
+
+        await device.transaction(b"frame", timeout=0.01)
+        await device.transaction(b"frame", timeout=0.01)
+
+        assert device.failures_within(3600) == 2
+        device._failure_times[0] -= 7200  # one of them happened two hours ago
+        assert device.failures_within(3600) == 1
+
     async def test_a_second_consecutive_timeout_drops_the_connection(self, monkeypatch):
         device = _make_transport()
         stream = _HangingStream()

@@ -212,8 +212,44 @@
             "consecutive_failures": {
                 "name": "Consecutive communication failures"
             },
+            "failed_requests_hour": {
+                "name": "Failed requests (last hour)"
+            },
+            "poll_duration": {
+                "name": "Poll duration"
+            },
             "circulationstate": {
                 "name": "DHW Circulation State (raw)"
+            },
+            "circuit1pumpdebug": {
+                "name": "Pump (raw)"
+            },
+            "circuit1calctemp": {
+                "name": "Calculated temperature"
+            },
+            "circuit2pumpdebug": {
+                "name": "Pump (raw)"
+            },
+            "circuit2calctemp": {
+                "name": "Calculated temperature"
+            },
+            "circuit3pumpdebug": {
+                "name": "Pump (raw)"
+            },
+            "circuit3calctemp": {
+                "name": "Calculated temperature"
+            },
+            "circuit6pumpdebug": {
+                "name": "Pump (raw)"
+            },
+            "circuit6calctemp": {
+                "name": "Calculated temperature"
+            },
+            "circuit7pumpdebug": {
+                "name": "Pump (raw)"
+            },
+            "circuit7calctemp": {
+                "name": "Calculated temperature"
             },
             "solar_dump_runtime_today": {
                 "name": "Solar dump circulator runtime today"

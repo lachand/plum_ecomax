@@ -10,7 +10,7 @@ import math
 from typing import Any
 
 from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import ClimateEntityFeature, HVACMode
+from homeassistant.components.climate.const import ClimateEntityFeature, HVACAction, HVACMode
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -185,6 +185,21 @@ class PlumEcomaxClimate(CoordinatorEntity[PlumDataUpdateCoordinator], ClimateEnt
         if is_active == 0:
             return HVACMode.OFF
         return HVACMode.HEAT
+
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """What the circuit is doing: heating while its mixing valve is open.
+
+        The boiler has no "heating" flag for a circuit; an open mixing valve is the
+        observable sign that hot water is being sent to it. None when the valve
+        position is not available.
+        """
+        if self.hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
+        valve = self._as_temp(self.coordinator.data.get(f"mixer{self._circuit_id}valveposition"))
+        if valve is None:
+            return None
+        return HVACAction.HEATING if valve > 0 else HVACAction.IDLE
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Sets new target operation mode.

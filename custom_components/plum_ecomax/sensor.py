@@ -91,6 +91,8 @@ async def async_setup_entry(
     # off the driver). See IMPROVEMENT_PLAN_ARCHIVE.md section C.
     entities.append(PlumLastCommunicationSensor(coordinator, entry.entry_id))
     entities.append(PlumConsecutiveFailuresSensor(coordinator, entry.entry_id))
+    entities.append(PlumRecentFailuresSensor(coordinator, entry.entry_id))
+    entities.append(PlumPollDurationSensor(coordinator, entry.entry_id))
     entities.append(PlumSolarDumpRuntimeSensor(coordinator, entry.entry_id))
 
     if entities:
@@ -284,6 +286,44 @@ class PlumConsecutiveFailuresSensor(_PlumLinkHealthSensor):
     @property
     def native_value(self) -> int:
         return self.coordinator.device.consecutive_failures
+
+
+class PlumRecentFailuresSensor(_PlumLinkHealthSensor):
+    """Requests that got no answer (or no connection) in the last hour.
+
+    The ecoNET module ignores requests while it sends its own bursts; this counts
+    how often that happens, so a flapping link can be told from a dead one.
+    """
+
+    _attr_translation_key = "failed_requests_hour"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
+        super().__init__(coordinator, entry_id)
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_failed_requests_hour"
+
+    @property
+    def native_value(self) -> int:
+        return self.coordinator.device.failures_within(3600)
+
+
+class PlumPollDurationSensor(_PlumLinkHealthSensor):
+    """How long the last poll cycle took."""
+
+    _attr_translation_key = "poll_duration"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_suggested_display_precision = 1
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str):
+        super().__init__(coordinator, entry_id)
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_poll_duration"
+
+    @property
+    def native_value(self) -> float | None:
+        seconds = self.coordinator.last_poll_seconds
+        return None if seconds is None else round(seconds, 2)
 
 
 class PlumSolarDumpRuntimeSensor(

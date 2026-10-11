@@ -228,3 +228,26 @@ async def test_raw_diagnostic_registers_are_created_disabled_but_alarms_stay_ena
     alarm = by_unique_id[f"{DOMAIN}_{entry.entry_id}_binary_sensor_alarmbits_1"]
     assert alarm.disabled_by is None  # alarms keep feeding the repair issue
     assert hass.states.get(alarm.entity_id) is not None
+
+
+async def test_link_diagnostics_and_the_circuit_registers_are_created(hass):
+    entry = await _setup(hass)
+    registry = er.async_get(hass)
+    by_unique_id = {
+        e.unique_id: e for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+    prefix = f"{DOMAIN}_{entry.entry_id}_"
+
+    for key in ("failed_requests_hour", "poll_duration"):
+        entity = by_unique_id[prefix + key]
+        assert entity.disabled_by is None
+        assert hass.states.get(entity.entity_id) is not None
+    for key in ("circuit2pumpdebug", "circuit2calctemp"):  # raw registers: off until enabled
+        assert by_unique_id[prefix + key].disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+async def test_circuit_thermostat_reports_heating_from_the_mixing_valve(hass):
+    FakePlumDevice.values["mixer2valveposition"] = 40.0
+    await _setup(hass)
+    state = hass.states.get("climate.circuit_2_thermostat")
+    assert state.attributes["hvac_action"] == "heating"

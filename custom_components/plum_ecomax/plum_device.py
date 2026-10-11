@@ -111,6 +111,10 @@ class PlumDevice:
         """Wall-clock time of the last transaction that got a valid response."""
         return self._transport.last_success_ts
 
+    def failures_within(self, seconds: float) -> int:
+        """Failed transactions in the last `seconds` (diagnostic sensor)."""
+        return self._transport.failures_within(seconds)
+
     def close(self) -> None:
         """Public, explicit teardown of the persistent connection.
 

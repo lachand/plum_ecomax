@@ -121,11 +121,47 @@
             "circulationstate": {
                 "default": "mdi:pump"
             },
+            "circuit1pumpdebug": {
+                "default": "mdi:pump"
+            },
+            "circuit1calctemp": {
+                "default": "mdi:thermometer-auto"
+            },
+            "circuit2pumpdebug": {
+                "default": "mdi:pump"
+            },
+            "circuit2calctemp": {
+                "default": "mdi:thermometer-auto"
+            },
+            "circuit3pumpdebug": {
+                "default": "mdi:pump"
+            },
+            "circuit3calctemp": {
+                "default": "mdi:thermometer-auto"
+            },
+            "circuit6pumpdebug": {
+                "default": "mdi:pump"
+            },
+            "circuit6calctemp": {
+                "default": "mdi:thermometer-auto"
+            },
+            "circuit7pumpdebug": {
+                "default": "mdi:pump"
+            },
+            "circuit7calctemp": {
+                "default": "mdi:thermometer-auto"
+            },
             "last_communication": {
                 "default": "mdi:lan-connect"
             },
             "consecutive_failures": {
                 "default": "mdi:lan-disconnect"
+            },
+            "failed_requests_hour": {
+                "default": "mdi:lan-pending"
+            },
+            "poll_duration": {
+                "default": "mdi:timer-sand"
             },
             "solar_dump_runtime_today": {
                 "default": "mdi:timer-play-outline"
