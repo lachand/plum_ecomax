@@ -1,0 +1,602 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Konfiguracja Plum EcoMAX",
+                "description": "Wprowadź dane połączenia konwertera RS-485 na Ethernet/Wi-Fi (lub modułu ecoNET) podłączonego do kotła.",
+                "data": {
+                    "ip_address": "Adres IP",
+                    "port": "Port",
+                    "username": "Nazwa użytkownika",
+                    "password": "Hasło",
+                    "active_circuits": "Liczba aktywnych obiegów grzewczych",
+                    "update_interval": "Interwał odpytywania (sekundy)"
+                },
+                "data_description": {
+                    "ip_address": "Lokalny adres IP konwertera RS-485 na Ethernet/Wi-Fi (lub modułu ecoNET) podłączonego do kotła.",
+                    "port": "Port TCP konwertera (domyślnie 8899).",
+                    "username": "Nazwa użytkownika wysyłana z poleceniami zapisu. Odczyty jej nie używają.",
+                    "password": "Hasło wysyłane z poleceniami zapisu. Kocioł sprawdza je tylko przy zapisie, więc błędne hasło ujawni się dopiero przy pierwszym zapisie.",
+                    "active_circuits": "Obiegi grzewcze, dla których tworzone są encje. Pominięte obiegi są ignorowane.",
+                    "update_interval": "Liczba sekund między odpytywaniami kotła (od 10 do 300). Temperatury bieżące są odczytywane przy każdym odpytaniu; nastawy i harmonogramy są dłużej przechowywane w pamięci podręcznej."
+                }
+            },
+            "reconfigure": {
+                "title": "Ponowna konfiguracja Plum EcoMAX",
+                "description": "Zmień dane połączenia konwertera RS-485 na Ethernet/Wi-Fi (lub modułu ecoNET).",
+                "data": {
+                    "ip_address": "Adres IP",
+                    "port": "Port",
+                    "username": "Nazwa użytkownika",
+                    "password": "Hasło",
+                    "active_circuits": "Liczba aktywnych obiegów grzewczych",
+                    "update_interval": "Interwał odpytywania (sekundy)"
+                },
+                "data_description": {
+                    "ip_address": "Lokalny adres IP konwertera RS-485 na Ethernet/Wi-Fi (lub modułu ecoNET) podłączonego do kotła.",
+                    "port": "Port TCP konwertera (domyślnie 8899).",
+                    "username": "Nazwa użytkownika wysyłana z poleceniami zapisu. Odczyty jej nie używają.",
+                    "password": "Hasło wysyłane z poleceniami zapisu. Kocioł sprawdza je tylko przy zapisie, więc błędne hasło ujawni się dopiero przy pierwszym zapisie.",
+                    "active_circuits": "Obiegi grzewcze, dla których tworzone są encje. Pominięte obiegi są ignorowane.",
+                    "update_interval": "Liczba sekund między odpytywaniami kotła (od 10 do 300). Temperatury bieżące są odczytywane przy każdym odpytaniu; nastawy i harmonogramy są dłużej przechowywane w pamięci podręcznej."
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Błąd połączenia.",
+            "cannot_load_map": "Nie udało się wczytać mapy parametrów",
+            "invalid_auth": "Błąd poświadczeń."
+        },
+        "abort": {
+            "already_configured": "Urządzenie jest już skonfigurowane.",
+            "reconfigure_successful": "Ustawienia zaktualizowane.",
+            "unique_id_mismatch": "Kocioł pod tym adresem nie jest tym, dla którego skonfigurowano ten wpis."
+        }
+    },
+    "selector": {
+        "circuits_selector": {
+            "options": {
+                "1": "Obieg 1",
+                "2": "Obieg 2",
+                "3": "Obieg 3",
+                "4": "Obieg 4",
+                "5": "Obieg 5",
+                "6": "Obieg 6",
+                "7": "Obieg 7"
+            }
+        }
+    },
+    "entity": {
+        "climate": {
+            "thermostat": {
+                "name": "Termostat"
+            }
+        },
+        "calendar": {
+            "schedule": {
+                "name": "Harmonogram"
+            }
+        },
+        "water_heater": {
+            "hdw": {
+                "name": "Ciepła woda użytkowa"
+            }
+        },
+        "sensor": {
+            "tempwthr": {
+                "name": "Temperatura zewnętrzna"
+            },
+            "boilerpower": {
+                "name": "Moc źródła ciepła"
+            },
+            "tempcwu": {
+                "name": "Temperatura CWU"
+            },
+            "hdwpumpstate": {
+                "name": "Pompa CWU"
+            },
+            "tempbuforup": {
+                "name": "Temperatura bufora (górna)"
+            },
+            "tempbufordown": {
+                "name": "Temperatura bufora (dolna)"
+            },
+            "tempclutch": {
+                "name": "Temperatura sprzęgła"
+            },
+            "buforsetpoint": {
+                "name": "Zadana temperatura bufora"
+            },
+            "tempcircuit1": {
+                "name": "Temperatura obiegu"
+            },
+            "tempcircuit2": {
+                "name": "Temperatura obiegu"
+            },
+            "tempcircuit3": {
+                "name": "Temperatura obiegu"
+            },
+            "tempcircuit4": {
+                "name": "Temperatura obiegu"
+            },
+            "tempcircuit5": {
+                "name": "Temperatura obiegu"
+            },
+            "tempcircuit6": {
+                "name": "Temperatura obiegu"
+            },
+            "tempcircuit7": {
+                "name": "Temperatura obiegu"
+            },
+            "circuit1thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "circuit2thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "circuit3thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "circuit4thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "circuit5thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "circuit6thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "circuit7thermostattemp": {
+                "name": "Temperatura termostatu"
+            },
+            "mixer1valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "mixer2valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "mixer3valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "mixer4valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "mixer5valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "mixer6valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "mixer7valveposition": {
+                "name": "Otwarcie zaworu"
+            },
+            "circuit1name": {
+                "name": "Nazwa"
+            },
+            "circuit2name": {
+                "name": "Nazwa"
+            },
+            "circuit3name": {
+                "name": "Nazwa"
+            },
+            "circuit4name": {
+                "name": "Nazwa"
+            },
+            "circuit5name": {
+                "name": "Nazwa"
+            },
+            "circuit6name": {
+                "name": "Nazwa"
+            },
+            "circuit7name": {
+                "name": "Nazwa"
+            },
+            "detectalarmsettings": {
+                "name": "Ustawienia wykrywania alarmów (surowe)"
+            },
+            "detectalarmstate": {
+                "name": "Wykryty stan alarmu (surowy)"
+            },
+            "workstate2": {
+                "name": "Stan pracy 2 (surowy)"
+            },
+            "workstate3": {
+                "name": "Stan pracy 3 (surowy)"
+            },
+            "workstate4": {
+                "name": "Stan pracy 4 (surowy)"
+            },
+            "last_communication": {
+                "name": "Ostatnia komunikacja"
+            },
+            "consecutive_failures": {
+                "name": "Kolejne błędy komunikacji"
+            },
+            "failed_requests_hour": {
+                "name": "Nieudane żądania (ostatnia godzina)"
+            },
+            "poll_duration": {
+                "name": "Czas trwania cyklu odczytu"
+            },
+            "circulationstate": {
+                "name": "Stan cyrkulacji CWU (surowy)"
+            },
+            "circuit1pumpdebug": {
+                "name": "Pompa (surowa)"
+            },
+            "circuit1calctemp": {
+                "name": "Temperatura obliczona"
+            },
+            "circuit2pumpdebug": {
+                "name": "Pompa (surowa)"
+            },
+            "circuit2calctemp": {
+                "name": "Temperatura obliczona"
+            },
+            "circuit3pumpdebug": {
+                "name": "Pompa (surowa)"
+            },
+            "circuit3calctemp": {
+                "name": "Temperatura obliczona"
+            },
+            "circuit6pumpdebug": {
+                "name": "Pompa (surowa)"
+            },
+            "circuit6calctemp": {
+                "name": "Temperatura obliczona"
+            },
+            "circuit7pumpdebug": {
+                "name": "Pompa (surowa)"
+            },
+            "circuit7calctemp": {
+                "name": "Temperatura obliczona"
+            },
+            "solar_dump_runtime_today": {
+                "name": "Czas pracy pompy rozładowania solarnego dzisiaj"
+            }
+        },
+        "binary_sensor": {
+            "manual_mode_active": {
+                "name": "Tryb ręczny aktywny"
+            },
+            "alarmbits_1": {
+                "name": "Bity alarmu 1"
+            },
+            "alarmbits_2": {
+                "name": "Bity alarmu 2"
+            },
+            "alarmbits_3": {
+                "name": "Bity alarmu 3"
+            },
+            "alarmbits_4": {
+                "name": "Bity alarmu 4"
+            },
+            "alarmbits_5": {
+                "name": "Bity alarmu 5"
+            }
+        },
+        "number": {
+            "hdwtsetpoint": {
+                "name": "Temperatura zadana CWU"
+            },
+            "hdwminsettemp": {
+                "name": "CWU Temperatura minimalna"
+            },
+            "hdwmaxsettemp": {
+                "name": "CWU Temperatura maksymalna"
+            },
+            "buforlongloadtime": {
+                "name": "Wymuszone ładowanie bufora (minuty)"
+            },
+            "hdwlegionsetpoint": {
+                "name": "Temperatura zadana antylegionella"
+            },
+            "hdwlegionday": {
+                "name": "Dzień antylegionella"
+            },
+            "hdwlegionhour": {
+                "name": "Godzina antylegionella"
+            },
+            "circuit1curvefloor": {
+                "name": "Krzywa grzewcza (podłogówka)"
+            },
+            "circuit1curveradiator": {
+                "name": "Krzywa grzewcza (grzejniki)"
+            },
+            "circuit1basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit1downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer1valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit1tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circuit2curvefloor": {
+                "name": "Krzywa grzewcza (podłogówka)"
+            },
+            "circuit2curveradiator": {
+                "name": "Krzywa grzewcza (grzejniki)"
+            },
+            "circuit2basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit2downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer2valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit2tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circuit3curvefloor": {
+                "name": "Krzywa grzewcza (podłogówka)"
+            },
+            "circuit3curveradiator": {
+                "name": "Krzywa grzewcza (grzejniki)"
+            },
+            "circuit3basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit3downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer3valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit3tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circuit4curvefloor": {
+                "name": "Krzywa grzewcza (podłogówka)"
+            },
+            "circuit4curveradiator": {
+                "name": "Krzywa grzewcza (grzejniki)"
+            },
+            "circuit4basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit4downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer4valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit4tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circuit5curvefloor": {
+                "name": "Krzywa grzewcza (podłogówka)"
+            },
+            "circuit5curveradiator": {
+                "name": "Krzywa grzewcza (grzejniki)"
+            },
+            "circuit5basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit5downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer5valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit5tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circuit6basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit6downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer6valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit6tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circuit7curvefloor": {
+                "name": "Krzywa grzewcza (podłogówka)"
+            },
+            "circuit7curveradiator": {
+                "name": "Krzywa grzewcza (grzejniki)"
+            },
+            "circuit7basetemp": {
+                "name": "Temperatura bazowa"
+            },
+            "circuit7downhist": {
+                "name": "Histereza termostatu pokojowego"
+            },
+            "mixer7valvedeadzone": {
+                "name": "Strefa nieczułości zaworu mieszającego"
+            },
+            "circuit7tempreduction": {
+                "name": "Obniżenie nocne"
+            },
+            "circulationtempstart": {
+                "name": "Temperatura startu cyrkulacji"
+            },
+            "circulationhisttemp": {
+                "name": "Histereza cyrkulacji"
+            },
+            "circulationtimework": {
+                "name": "Czas pracy cyrkulacji (min)"
+            },
+            "circulationtimestop": {
+                "name": "Czas przerwy cyrkulacji (min)"
+            },
+            "circuit1minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit1maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "circuit2minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit2maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "circuit3minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit3maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "circuit4minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit4maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "circuit5minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit5maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "circuit6minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit6maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "circuit7minsetpointcooling": {
+                "name": "Nastawa chłodzenia min."
+            },
+            "circuit7maxsetpointcooling": {
+                "name": "Nastawa chłodzenia maks."
+            },
+            "solar_dump_start_temp": {
+                "name": "Temperatura startu rozładowania solarnego"
+            },
+            "solar_dump_stop_temp": {
+                "name": "Temperatura zatrzymania rozładowania solarnego"
+            },
+            "solar_dump_auto_ecs_floor": {
+                "name": "Dolny próg CWU rozładowania solarnego (auto)"
+            },
+            "solar_dump_buffer_target": {
+                "name": "Temperatura docelowa bufora rozładowania solarnego"
+            },
+            "solar_dump_dt_start": {
+                "name": "ΔT startu rozładowania solarnego"
+            },
+            "solar_dump_daily_budget": {
+                "name": "Dzienny limit pracy pompy rozładowania solarnego"
+            }
+        },
+        "switch": {
+            "hdwstartoneloading": {
+                "name": "Wymuś grzanie CWU"
+            },
+            "hdwpumpforce": {
+                "name": "Pompa → bufor solarny"
+            },
+            "hdwstartlegion": {
+                "name": "Cykl antylegionella"
+            },
+            "operatingmode": {
+                "name": "Tryb ręczny"
+            },
+            "solar_dump_auto": {
+                "name": "Rozładowanie solarne – tryb automatyczny"
+            }
+        },
+        "select": {
+            "hdwusermode": {
+                "name": "Tryb CWU",
+                "state": {
+                    "off": "Wyłączony",
+                    "manual": "Ręczny",
+                    "auto": "Auto"
+                }
+            }
+        },
+        "button": {
+            "save_number_defaults": {
+                "name": "Zapisz bieżące wartości jako wzorcowe"
+            },
+            "restore_number_defaults": {
+                "name": "Przywróć wartości wzorcowe"
+            }
+        }
+    },
+    "issues": {
+        "alarm_active": {
+            "title": "Alarm kotła aktywny",
+            "description": "Kocioł zgłasza aktywny bit alarmu w „{slug}”. Sprawdź kod alarmu i sposób jego skasowania na panelu kotła – integracja wykrywa tylko ustawienie bitu i nie dekoduje poszczególnych kodów alarmów."
+        },
+        "write_rejected": {
+            "title": "Kocioł odrzucił zapis",
+            "description": "Zapis „{slug}” został odrzucony przez kocioł z kodem wyniku {code} (np. 0x7D = błąd uwierzytelnienia) po 5 próbach. Sprawdź hasło skonfigurowane dla tej integracji oraz czy parametr można zapisać w bieżącym stanie."
+        },
+        "connection_lost": {
+            "title": "Utracono połączenie z kotłem",
+            "description": "{count} kolejnych prób komunikacji z kotłem nie powiodło się. Sprawdź, czy kocioł jest włączony i dostępny w sieci pod skonfigurowanym adresem IP/portem. Encje będą pokazywać nieaktualne lub niedostępne dane do czasu przywrócenia łączności."
+        },
+        "manual_mode_stuck": {
+            "title": "Kocioł może być zablokowany w trybie ręcznym",
+            "description": "Usługa solar_to_buffer nie mogła przywrócić trybu automatycznego kotła. W trybie ręcznym automatyczna regulacja jest wyłączona. Przełącz tryb pracy z powrotem na automatyczny na panelu ecoSTER (lub wyłącz przełącznik Trybu ręcznego), a następnie sprawdź połączenie sieciowe z kotłem."
+        }
+    },
+    "services": {
+        "set_schedule": {
+            "name": "Ustaw harmonogram tygodniowy",
+            "description": "Nadpisuje tygodniowy harmonogram komfort/eko dla obiegu grzewczego lub ciepłej wody użytkowej. Czas poza blokami komfortu staje się trybem eko.",
+            "fields": {
+                "circuit": {
+                    "name": "Obieg",
+                    "description": "Numer obiegu grzewczego. Pozostaw puste dla ciepłej wody użytkowej."
+                },
+                "days": {
+                    "name": "Dni",
+                    "description": "Dni, których dotyczy harmonogram."
+                },
+                "comfort_blocks": {
+                    "name": "Bloki komfortu",
+                    "description": "Lista przedziałów czasu od/do, w których ma obowiązywać tryb komfort. Pusta lista ustawia cały dzień na eko."
+                }
+            }
+        },
+        "solar_to_buffer": {
+            "name": "Rozładowanie solarne do bufora",
+            "description": "Przełącza kocioł w tryb ręczny i wymusza pracę pompy CWU przez zadany czas, po czym wraca do trybu automatycznego. Przenosi ciepło ze zbiornika CWU ładowanego słonecznie do zbiorników buforowych.",
+            "fields": {
+                "duration": {
+                    "name": "Czas trwania",
+                    "description": "Jak długo wymuszać pracę pompy, w minutach (maksymalnie 120)."
+                },
+                "start_temp": {
+                    "name": "Temperatura startu",
+                    "description": "Zastępuje skonfigurowany próg startu dla tego wywołania. Rozładowanie nie rozpocznie się, jeśli zbiornik CWU jest poniżej tej temperatury."
+                },
+                "stop_temp": {
+                    "name": "Temperatura zatrzymania",
+                    "description": "Zastępuje skonfigurowany próg zatrzymania dla tego wywołania. Rozładowanie zatrzyma się, gdy zbiornik CWU ostygnie do tej temperatury."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "write_failed": {
+            "message": "Kocioł nie potwierdził zapisu {slug}; przywrócono poprzednią wartość."
+        },
+        "write_rejected": {
+            "message": "Kocioł odrzucił zapis {slug} (kod {code}). Sprawdź nazwę użytkownika i hasło w Ponownej konfiguracji."
+        },
+        "no_entry_loaded": {
+            "message": "Nie skonfigurowano ani nie załadowano żadnego Plum ecoMAX."
+        },
+        "circuit_not_active": {
+            "message": "Obieg {circuit} nie jest aktywnym obiegiem żadnego załadowanego Plum ecoMAX."
+        },
+        "schedule_not_supported": {
+            "message": "Żaden z załadowanych kotłów nie udostępnia harmonogramu tygodniowego dla tego celu."
+        }
+    }
+}

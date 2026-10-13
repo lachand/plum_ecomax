@@ -1,0 +1,602 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Plum EcoMAX Configuratie",
+                "description": "Voer de verbindingsgegevens in van de RS-485-naar-Ethernet/Wi-Fi-converter (of ecoNET-module) die op de ketel is aangesloten.",
+                "data": {
+                    "ip_address": "IP-Adres",
+                    "port": "Poort",
+                    "username": "Gebruikersnaam",
+                    "password": "Wachtwoord",
+                    "active_circuits": "Actieve verwarmingscircuits",
+                    "update_interval": "Pollinginterval (seconden)"
+                },
+                "data_description": {
+                    "ip_address": "Lokaal IP-adres van de RS-485-naar-Ethernet/Wi-Fi-converter (of ecoNET-module) die op de ketel is aangesloten.",
+                    "port": "TCP-poort van de converter (standaard 8899).",
+                    "username": "Gebruikersnaam die met schrijfopdrachten wordt meegestuurd. Bij het lezen wordt hij niet gebruikt.",
+                    "password": "Wachtwoord dat met schrijfopdrachten wordt meegestuurd. De ketel controleert het alleen bij het schrijven, dus een fout wachtwoord blijkt pas bij de eerste schrijfactie.",
+                    "active_circuits": "Verwarmingscircuits waarvoor entiteiten worden aangemaakt. Weggelaten circuits worden overgeslagen.",
+                    "update_interval": "Seconden tussen twee uitlezingen van de ketel (10 tot 300). Actuele temperaturen worden bij elke uitlezing opnieuw gelezen; instellingen en schema's worden langer in de cache bewaard."
+                }
+            },
+            "reconfigure": {
+                "title": "Plum EcoMAX opnieuw configureren",
+                "description": "Wijzig de verbindingsgegevens van de RS-485-naar-Ethernet/Wi-Fi-converter (of ecoNET-module).",
+                "data": {
+                    "ip_address": "IP-Adres",
+                    "port": "Poort",
+                    "username": "Gebruikersnaam",
+                    "password": "Wachtwoord",
+                    "active_circuits": "Actieve verwarmingscircuits",
+                    "update_interval": "Pollinginterval (seconden)"
+                },
+                "data_description": {
+                    "ip_address": "Lokaal IP-adres van de RS-485-naar-Ethernet/Wi-Fi-converter (of ecoNET-module) die op de ketel is aangesloten.",
+                    "port": "TCP-poort van de converter (standaard 8899).",
+                    "username": "Gebruikersnaam die met schrijfopdrachten wordt meegestuurd. Bij het lezen wordt hij niet gebruikt.",
+                    "password": "Wachtwoord dat met schrijfopdrachten wordt meegestuurd. De ketel controleert het alleen bij het schrijven, dus een fout wachtwoord blijkt pas bij de eerste schrijfactie.",
+                    "active_circuits": "Verwarmingscircuits waarvoor entiteiten worden aangemaakt. Weggelaten circuits worden overgeslagen.",
+                    "update_interval": "Seconden tussen twee uitlezingen van de ketel (10 tot 300). Actuele temperaturen worden bij elke uitlezing opnieuw gelezen; instellingen en schema's worden langer in de cache bewaard."
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbinden mislukt",
+            "cannot_load_map": "Kon de parameterkaart niet laden",
+            "invalid_auth": "Ongeldige inlog"
+        },
+        "abort": {
+            "already_configured": "Het apparaat is al geconfigureerd",
+            "reconfigure_successful": "Instellingen bijgewerkt.",
+            "unique_id_mismatch": "De ketel op dit adres is niet de ketel waarvoor deze configuratie is ingesteld."
+        }
+    },
+    "selector": {
+        "circuits_selector": {
+            "options": {
+                "1": "Circuit 1",
+                "2": "Circuit 2",
+                "3": "Circuit 3",
+                "4": "Circuit 4",
+                "5": "Circuit 5",
+                "6": "Circuit 6",
+                "7": "Circuit 7"
+            }
+        }
+    },
+    "entity": {
+        "climate": {
+            "thermostat": {
+                "name": "Thermostaat"
+            }
+        },
+        "calendar": {
+            "schedule": {
+                "name": "Schema"
+            }
+        },
+        "water_heater": {
+            "hdw": {
+                "name": "Tapwater"
+            }
+        },
+        "sensor": {
+            "tempwthr": {
+                "name": "Buitentemperatuur"
+            },
+            "boilerpower": {
+                "name": "Warmtepompvermogen"
+            },
+            "tempcwu": {
+                "name": "Tapwatertemperatuur"
+            },
+            "hdwpumpstate": {
+                "name": "Tapwaterpomp"
+            },
+            "tempbuforup": {
+                "name": "Buffervat (boven)"
+            },
+            "tempbufordown": {
+                "name": "Buffervat (onder)"
+            },
+            "tempclutch": {
+                "name": "Klep temperatuur"
+            },
+            "buforsetpoint": {
+                "name": "Buffervat doeltemperatuur"
+            },
+            "tempcircuit1": {
+                "name": "Aanvoertemperatuur"
+            },
+            "tempcircuit2": {
+                "name": "Aanvoertemperatuur"
+            },
+            "tempcircuit3": {
+                "name": "Aanvoertemperatuur"
+            },
+            "tempcircuit4": {
+                "name": "Aanvoertemperatuur"
+            },
+            "tempcircuit5": {
+                "name": "Aanvoertemperatuur"
+            },
+            "tempcircuit6": {
+                "name": "Aanvoertemperatuur"
+            },
+            "tempcircuit7": {
+                "name": "Aanvoertemperatuur"
+            },
+            "circuit1thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "circuit2thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "circuit3thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "circuit4thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "circuit5thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "circuit6thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "circuit7thermostattemp": {
+                "name": "Kamertemperatuur"
+            },
+            "mixer1valveposition": {
+                "name": "Mengklepstand"
+            },
+            "mixer2valveposition": {
+                "name": "Mengklepstand"
+            },
+            "mixer3valveposition": {
+                "name": "Mengklepstand"
+            },
+            "mixer4valveposition": {
+                "name": "Mengklepstand"
+            },
+            "mixer5valveposition": {
+                "name": "Mengklepstand"
+            },
+            "mixer6valveposition": {
+                "name": "Mengklepstand"
+            },
+            "mixer7valveposition": {
+                "name": "Mengklepstand"
+            },
+            "circuit1name": {
+                "name": "Naam"
+            },
+            "circuit2name": {
+                "name": "Naam"
+            },
+            "circuit3name": {
+                "name": "Naam"
+            },
+            "circuit4name": {
+                "name": "Naam"
+            },
+            "circuit5name": {
+                "name": "Naam"
+            },
+            "circuit6name": {
+                "name": "Naam"
+            },
+            "circuit7name": {
+                "name": "Naam"
+            },
+            "detectalarmsettings": {
+                "name": "Instellingen alarmdetectie (ruw)"
+            },
+            "detectalarmstate": {
+                "name": "Gedetecteerde alarmstatus (ruw)"
+            },
+            "workstate2": {
+                "name": "Werkstatus 2 (ruw)"
+            },
+            "workstate3": {
+                "name": "Werkstatus 3 (ruw)"
+            },
+            "workstate4": {
+                "name": "Werkstatus 4 (ruw)"
+            },
+            "last_communication": {
+                "name": "Laatste communicatie"
+            },
+            "consecutive_failures": {
+                "name": "Opeenvolgende communicatiefouten"
+            },
+            "failed_requests_hour": {
+                "name": "Mislukte verzoeken (laatste uur)"
+            },
+            "poll_duration": {
+                "name": "Duur van de uitleescyclus"
+            },
+            "circulationstate": {
+                "name": "Status tapwatercirculatie (ruw)"
+            },
+            "circuit1pumpdebug": {
+                "name": "Pomp (ruw)"
+            },
+            "circuit1calctemp": {
+                "name": "Berekende temperatuur"
+            },
+            "circuit2pumpdebug": {
+                "name": "Pomp (ruw)"
+            },
+            "circuit2calctemp": {
+                "name": "Berekende temperatuur"
+            },
+            "circuit3pumpdebug": {
+                "name": "Pomp (ruw)"
+            },
+            "circuit3calctemp": {
+                "name": "Berekende temperatuur"
+            },
+            "circuit6pumpdebug": {
+                "name": "Pomp (ruw)"
+            },
+            "circuit6calctemp": {
+                "name": "Berekende temperatuur"
+            },
+            "circuit7pumpdebug": {
+                "name": "Pomp (ruw)"
+            },
+            "circuit7calctemp": {
+                "name": "Berekende temperatuur"
+            },
+            "solar_dump_runtime_today": {
+                "name": "Looptijd circulatiepomp zonne-ontlading vandaag"
+            }
+        },
+        "binary_sensor": {
+            "manual_mode_active": {
+                "name": "Handmatige modus actief"
+            },
+            "alarmbits_1": {
+                "name": "Alarmbits 1"
+            },
+            "alarmbits_2": {
+                "name": "Alarmbits 2"
+            },
+            "alarmbits_3": {
+                "name": "Alarmbits 3"
+            },
+            "alarmbits_4": {
+                "name": "Alarmbits 4"
+            },
+            "alarmbits_5": {
+                "name": "Alarmbits 5"
+            }
+        },
+        "number": {
+            "hdwtsetpoint": {
+                "name": "Tapwater doeltemperatuur"
+            },
+            "hdwminsettemp": {
+                "name": "Tapwater minimumtemperatuur"
+            },
+            "hdwmaxsettemp": {
+                "name": "Tapwater maximumtemperatuur"
+            },
+            "buforlongloadtime": {
+                "name": "Buffervat geforceerd laden (minuten)"
+            },
+            "hdwlegionsetpoint": {
+                "name": "Doeltemperatuur anti-legionella"
+            },
+            "hdwlegionday": {
+                "name": "Dag anti-legionella"
+            },
+            "hdwlegionhour": {
+                "name": "Uur anti-legionella"
+            },
+            "circuit1curvefloor": {
+                "name": "Stookcurve (vloer)"
+            },
+            "circuit1curveradiator": {
+                "name": "Stookcurve (radiator)"
+            },
+            "circuit1basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit1downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer1valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit1tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circuit2curvefloor": {
+                "name": "Stookcurve (vloer)"
+            },
+            "circuit2curveradiator": {
+                "name": "Stookcurve (radiator)"
+            },
+            "circuit2basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit2downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer2valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit2tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circuit3curvefloor": {
+                "name": "Stookcurve (vloer)"
+            },
+            "circuit3curveradiator": {
+                "name": "Stookcurve (radiator)"
+            },
+            "circuit3basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit3downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer3valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit3tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circuit4curvefloor": {
+                "name": "Stookcurve (vloer)"
+            },
+            "circuit4curveradiator": {
+                "name": "Stookcurve (radiator)"
+            },
+            "circuit4basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit4downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer4valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit4tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circuit5curvefloor": {
+                "name": "Stookcurve (vloer)"
+            },
+            "circuit5curveradiator": {
+                "name": "Stookcurve (radiator)"
+            },
+            "circuit5basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit5downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer5valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit5tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circuit6basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit6downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer6valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit6tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circuit7curvefloor": {
+                "name": "Stookcurve (vloer)"
+            },
+            "circuit7curveradiator": {
+                "name": "Stookcurve (radiator)"
+            },
+            "circuit7basetemp": {
+                "name": "Basistemperatuur"
+            },
+            "circuit7downhist": {
+                "name": "Hysterese kamerthermostaat"
+            },
+            "mixer7valvedeadzone": {
+                "name": "Dode zone mengklep"
+            },
+            "circuit7tempreduction": {
+                "name": "Nachtverlaging"
+            },
+            "circulationtempstart": {
+                "name": "Starttemperatuur circulatie"
+            },
+            "circulationhisttemp": {
+                "name": "Hysterese circulatie"
+            },
+            "circulationtimework": {
+                "name": "Looptijd circulatie (min)"
+            },
+            "circulationtimestop": {
+                "name": "Pauzetijd circulatie (min)"
+            },
+            "circuit1minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit1maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "circuit2minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit2maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "circuit3minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit3maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "circuit4minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit4maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "circuit5minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit5maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "circuit6minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit6maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "circuit7minsetpointcooling": {
+                "name": "Koelsetpoint min"
+            },
+            "circuit7maxsetpointcooling": {
+                "name": "Koelsetpoint max"
+            },
+            "solar_dump_start_temp": {
+                "name": "Starttemperatuur zonne-ontlading"
+            },
+            "solar_dump_stop_temp": {
+                "name": "Stoptemperatuur zonne-ontlading"
+            },
+            "solar_dump_auto_ecs_floor": {
+                "name": "Ondergrens tapwater (auto) zonne-ontlading"
+            },
+            "solar_dump_buffer_target": {
+                "name": "Doeltemperatuur buffervat zonne-ontlading"
+            },
+            "solar_dump_dt_start": {
+                "name": "Start-ΔT zonne-ontlading"
+            },
+            "solar_dump_daily_budget": {
+                "name": "Pompbudget zonne-ontlading per dag"
+            }
+        },
+        "switch": {
+            "hdwstartoneloading": {
+                "name": "Forceer opnieuw laden tapwater"
+            },
+            "hdwpumpforce": {
+                "name": "Pomp → zonnebuffer"
+            },
+            "hdwstartlegion": {
+                "name": "Anti-legionellacyclus"
+            },
+            "operatingmode": {
+                "name": "Handmatige modus"
+            },
+            "solar_dump_auto": {
+                "name": "Zonne-ontlading automatische modus"
+            }
+        },
+        "select": {
+            "hdwusermode": {
+                "name": "Tapwatermodus",
+                "state": {
+                    "off": "Uit",
+                    "manual": "Handmatig",
+                    "auto": "Automatisch"
+                }
+            }
+        },
+        "button": {
+            "save_number_defaults": {
+                "name": "Huidige waarden als referentie opslaan"
+            },
+            "restore_number_defaults": {
+                "name": "Referentiewaarden herstellen"
+            }
+        }
+    },
+    "issues": {
+        "alarm_active": {
+            "title": "Ketelalarm actief",
+            "description": "De ketel meldt een actieve alarmbit op \"{slug}\". Raadpleeg het bedieningspaneel van de ketel voor de alarmcode en de reset. Deze integratie detecteert alleen dat er een bit is gezet; ze decodeert geen afzonderlijke alarmcodes."
+        },
+        "write_rejected": {
+            "title": "Ketel weigerde een schrijfopdracht",
+            "description": "Het schrijven van \"{slug}\" werd na 5 pogingen door de ketel geweigerd met resultaatcode {code} (bijv. 0x7D = authenticatiefout). Controleer het wachtwoord dat voor deze integratie is ingesteld en of de parameter in de huidige toestand wel beschrijfbaar is."
+        },
+        "connection_lost": {
+            "title": "Verbinding met ketel verloren",
+            "description": "{count} opeenvolgende pogingen om met de ketel te communiceren zijn mislukt. Controleer of de ketel aan staat en bereikbaar is op het ingestelde IP-adres/poort. Entiteiten tonen verouderde of onbeschikbare gegevens tot de verbinding is hersteld."
+        },
+        "manual_mode_stuck": {
+            "title": "Ketel zit mogelijk vast in handmatige modus",
+            "description": "De service solar_to_buffer kon de ketel niet terugzetten naar de automatische modus. In de handmatige modus is de automatische regeling uitgeschakeld. Zet de bedrijfsmodus terug op automatisch op het ecoSTER-paneel (of zet de schakelaar Handmatige modus uit) en controleer daarna de netwerkverbinding met de ketel."
+        }
+    },
+    "services": {
+        "set_schedule": {
+            "name": "Wekelijks schema instellen",
+            "description": "Overschrijft het wekelijkse comfort/eco-schema van een verwarmingscircuit of van het tapwater. Elk tijdstip buiten een comfortblok wordt eco.",
+            "fields": {
+                "circuit": {
+                    "name": "Circuit",
+                    "description": "Nummer van het verwarmingscircuit. Laat leeg voor tapwater."
+                },
+                "days": {
+                    "name": "Dagen",
+                    "description": "Op welke dagen dit schema geldt."
+                },
+                "comfort_blocks": {
+                    "name": "Comfortblokken",
+                    "description": "Lijst van tijdsbereiken (van/tot) die op comfort moeten staan. Een lege lijst zet de hele dag op eco."
+                }
+            }
+        },
+        "solar_to_buffer": {
+            "name": "Zonne-ontlading naar buffer",
+            "description": "Zet de ketel in de handmatige modus en forceert de tapwaterpomp gedurende een ingestelde tijd, en keert daarna terug naar automatisch. Verplaatst warmte van het zonnig opgewarmde tapwatervat naar de buffervaten.",
+            "fields": {
+                "duration": {
+                    "name": "Duur",
+                    "description": "Hoe lang de pomp wordt geforceerd, in minuten (maximaal 120)."
+                },
+                "start_temp": {
+                    "name": "Starttemperatuur",
+                    "description": "Overschrijft de ingestelde startdrempel voor deze aanroep. De ontlading start niet als het tapwatervat onder deze temperatuur ligt."
+                },
+                "stop_temp": {
+                    "name": "Stoptemperatuur",
+                    "description": "Overschrijft de ingestelde stopdrempel voor deze aanroep. De ontlading stopt zodra het tapwatervat tot deze temperatuur is gedaald."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "write_failed": {
+            "message": "De ketel bevestigde het schrijven van {slug} niet; de vorige waarde is hersteld."
+        },
+        "write_rejected": {
+            "message": "De ketel weigerde het schrijven van {slug} (code {code}). Controleer gebruikersnaam en wachtwoord via Opnieuw configureren."
+        },
+        "no_entry_loaded": {
+            "message": "Er is geen Plum ecoMAX ingesteld of geladen."
+        },
+        "circuit_not_active": {
+            "message": "Circuit {circuit} is geen actief circuit van een geladen Plum ecoMAX."
+        },
+        "schedule_not_supported": {
+            "message": "Geen van de geladen ketels biedt een weekschema voor dat doel."
+        }
+    }
+}

@@ -26,6 +26,7 @@ This integration aims to support the primary functions of the ecoMAX controller:
 * **Batched, persistent connection:** Several parameters are read per network request instead of one connection per value, and the TCP connection to the boiler is kept open across polls (with automatic reconnection) instead of reconnecting every time.
 * **Diagnostics download:** Downloadable redacted diagnostics snapshot from the device page (Settings → Devices & Services → Plum EcoMAX → Download diagnostics).
 * **Reconfigurable:** IP address, port, credentials, active circuits, and polling interval can be changed later via **Reconfigure** on the integration, without deleting and re-adding it.
+* **Languages:** English, French, Dutch and Polish. The Dutch and Polish files start from the translations contributed in the [ecoMAX discussion](https://github.com/denpamusic/homeassistant-plum-ecomax/issues/63) by @janstolte and @jasienty; the strings added since were completed without a native speaker, so corrections are welcome (a pull request on `custom_components/plum_ecomax/translations/` is enough).
 
 ### A note on "force" parameters
 
@@ -148,6 +149,15 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 ## Development
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
+
+### Upgrading to 1.2.0
+
+No reconfiguration needed. Restart Home Assistant after updating.
+
+* **New configuration entities per circuit:** *Room Thermostat Hysteresis* (`circuitNdownhist`) and *Mixing Valve Dead Zone* (`mixerNvalvedeadzone`), on the circuit's device. The hysteresis decides when the circuit's pump and mixing valve start (room temperature below the setpoint minus this value); both are included in the *save / restore reference values* buttons. If you force circulation by raising the circuit setpoint (for example from an automation), keep the margin above the hysteresis plus 0.25 K.
+* **Mixer settings now live on the circuit's device** (like the valve-position sensor), not on a shared *Mixers* device. No such entity existed before.
+* **Dutch and Polish translations** (completed without a native speaker: corrections welcome).
+* **Documentation:** the tested link is an RS-485 to Ethernet/Wi-Fi converter (Hi-Flying Elfin EW11), not an ecoNET module (which should speak the same protocol but is untested), and the troubleshooting section explains why a circuit may not start.
 
 ### Upgrading to 1.1.0
 

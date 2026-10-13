@@ -39,3 +39,28 @@ def test_every_language_file_has_the_same_keys_as_strings():
             f"{lang_file.name}: key mismatch vs strings.json "
             f"(missing={sorted(expected - got)}, extra={sorted(got - expected)})"
         )
+
+
+def _placeholders(node, prefix=""):
+    import re
+
+    out = {}
+    if isinstance(node, dict):
+        for k, v in node.items():
+            out.update(_placeholders(v, f"{prefix}.{k}" if prefix else k))
+    elif isinstance(node, str):
+        out[prefix] = sorted(re.findall(r"\{[a-z_]+\}", node))
+    return out
+
+
+def test_every_language_keeps_the_placeholders_of_the_source_strings():
+    expected = _placeholders(_load(COMPONENT / "strings.json"))
+    for lang_file in (COMPONENT / "translations").glob("*.json"):
+        got = _placeholders(_load(lang_file))
+        wrong = {k for k in expected if expected[k] != got.get(k)}
+        assert not wrong, f"{lang_file.name}: placeholders differ for {sorted(wrong)}"
+
+
+def test_the_shipped_languages_are_the_expected_ones():
+    names = {p.stem for p in (COMPONENT / "translations").glob("*.json")}
+    assert {"en", "fr", "nl", "pl"} <= names

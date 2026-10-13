@@ -46,10 +46,18 @@ def _on_dhw_device(platform: str, key: str) -> bool:
 
 
 def test_no_entity_on_a_circuit_device_repeats_the_circuit_name():
-    for lang in (COMPONENT / "strings.json", COMPONENT / "translations" / "fr.json"):
+    langs = [COMPONENT / "strings.json"] + [
+        COMPONENT / "translations" / f"{code}.json" for code in ("fr", "nl", "pl")
+    ]
+    for lang in langs:
         for platform, key, name in _names(lang):
             if _on_circuit_device(platform, key):
-                assert not re.search(r"\bCircuit \d+\b", name), (lang.name, platform, key, name)
+                assert not re.search(r"\b(Circuit|Obieg) \d+\b", name), (
+                    lang.name,
+                    platform,
+                    key,
+                    name,
+                )
 
 
 def test_no_entity_on_the_dhw_device_repeats_the_dhw_name():
