@@ -105,3 +105,14 @@ class TestDetectionCandidates:
 
     def test_an_empty_map_gives_no_candidates(self):
         assert detection_candidates({}) == []
+
+
+def test_circuit_hysteresis_and_mixer_dead_zone_are_configurable_numbers():
+    from custom_components.plum_ecomax.const import NUMBER_TYPES
+    from custom_components.plum_ecomax.number import is_config_category_slug
+
+    for circuit in range(1, 8):
+        for slug in (f"circuit{circuit}downhist", f"mixer{circuit}valvedeadzone"):
+            low, high, step, _icon = NUMBER_TYPES[slug]
+            assert 0 < low < 1.0 < high and step == 0.1  # the stock value (1.0 K) is in range
+            assert is_config_category_slug(slug)

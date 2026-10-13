@@ -36,7 +36,7 @@ PARALLEL_UPDATES = 1
 
 _CIRCUIT_SLUG_RE = re.compile(r"^circuit(\d+)")
 # Mixer N is physically tied to circuit N on this boiler, so mixer entities
-# (none exist in NUMBER_TYPES yet, but see DP_INVENTORY.md) are gated by
+# (the valve dead zone) are gated by
 # the same active-circuits setting as circuit entities -- see sensor.py's
 # async_setup_entry for the same fix, prompted by "mixers_ouverture_vanne_3"
 # showing up for a circuit that was never configured or wired up.
@@ -55,7 +55,7 @@ def is_config_category_slug(slug: str) -> bool:
     Shared with button.py's save/restore-defaults buttons, which operate
     on exactly this set of "advanced" parameters.
     """
-    return bool(_CIRCUIT_SLUG_RE.match(slug)) or slug.startswith(_ADVANCED_NUMBER_PREFIXES)
+    return bool(_CIRCUIT_OR_MIXER_SLUG_RE.match(slug)) or slug.startswith(_ADVANCED_NUMBER_PREFIXES)
 
 
 def active_number_slugs(params_map: Mapping[str, Any], selected_circuits: list[str]) -> list[str]:
@@ -139,7 +139,9 @@ class PlumEcomaxNumber(CoordinatorEntity[PlumDataUpdateCoordinator], NumberEntit
         self._entry_id = entry.entry_id
         self._attr_translation_key = slug
 
-        self._circuit_match = _CIRCUIT_SLUG_RE.match(slug)
+        # Mixer N is circuit N's valve: its settings sit on the circuit's device, like
+        # the valve-position sensor does.
+        self._circuit_match = _CIRCUIT_OR_MIXER_SLUG_RE.match(slug)
         if is_config_category_slug(slug):
             self._attr_entity_category = EntityCategory.CONFIG
 

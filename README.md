@@ -110,7 +110,7 @@ Developed and tested against a **Plum ecoMAX 360i** through its **ecoNET** netwo
 |---|---|
 | Sensor | Temperatures, power, circuit names, serial number (on the device page), link health ("last communication", "consecutive failures", "failed requests (last hour)", "poll duration"), circulator runtime today |
 | Binary sensor | "Manual mode active", coarse alarm-bit indicators |
-| Number | Setpoints, heating curves, cooling bounds, DHW circulation timing, solar-dump thresholds |
+| Number | Setpoints, heating curves, room-thermostat hysteresis and mixing-valve dead zone (per circuit), cooling bounds, DHW circulation timing, solar-dump thresholds |
 | Switch | Manual mode, DHW anti-legionella cycle, DHW reload, **DHW pump → Solar buffer**, solar-dump automatic mode |
 | Select / Water heater / Climate | DHW mode, DHW tank, one thermostat per active circuit (it reports *heating* while the circuit's mixing valve is open, *idle* otherwise) |
 | Calendar | Weekly comfort/eco program per circuit and for DHW |

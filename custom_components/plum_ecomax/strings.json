@@ -306,6 +306,12 @@
             "circuit1basetemp": {
                 "name": "Base Temperature"
             },
+            "circuit1downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer1valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
+            },
             "circuit1tempreduction": {
                 "name": "Night Setback"
             },
@@ -317,6 +323,12 @@
             },
             "circuit2basetemp": {
                 "name": "Base Temperature"
+            },
+            "circuit2downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer2valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
             },
             "circuit2tempreduction": {
                 "name": "Night Setback"
@@ -330,6 +342,12 @@
             "circuit3basetemp": {
                 "name": "Base Temperature"
             },
+            "circuit3downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer3valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
+            },
             "circuit3tempreduction": {
                 "name": "Night Setback"
             },
@@ -341,6 +359,12 @@
             },
             "circuit4basetemp": {
                 "name": "Base Temperature"
+            },
+            "circuit4downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer4valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
             },
             "circuit4tempreduction": {
                 "name": "Night Setback"
@@ -354,11 +378,23 @@
             "circuit5basetemp": {
                 "name": "Base Temperature"
             },
+            "circuit5downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer5valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
+            },
             "circuit5tempreduction": {
                 "name": "Night Setback"
             },
             "circuit6basetemp": {
                 "name": "Base Temperature"
+            },
+            "circuit6downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer6valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
             },
             "circuit6tempreduction": {
                 "name": "Night Setback"
@@ -371,6 +407,12 @@
             },
             "circuit7basetemp": {
                 "name": "Base Temperature"
+            },
+            "circuit7downhist": {
+                "name": "Room Thermostat Hysteresis"
+            },
+            "mixer7valvedeadzone": {
+                "name": "Mixing Valve Dead Zone"
             },
             "circuit7tempreduction": {
                 "name": "Night Setback"

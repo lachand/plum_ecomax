@@ -400,6 +400,11 @@ for _circuit_id in range(1, 8):
         NUMBER_TYPES[f"circuit{_circuit_id}curvefloor"] = (0.1, 4.0, 0.1, "mdi:chart-bell-curve")
         NUMBER_TYPES[f"circuit{_circuit_id}curveradiator"] = (0.1, 4.0, 0.1, "mdi:chart-bell-curve")
     NUMBER_TYPES[f"circuit{_circuit_id}basetemp"] = (20, 90, 1, "mdi:thermometer")
+    # Room-thermostat hysteresis: the circuit pump/mixer only starts once the room
+    # temperature is below the setpoint minus this value (1.0 K on the reference
+    # boiler). And the mixing valve's dead zone (DP_INVENTORY.md).
+    NUMBER_TYPES[f"circuit{_circuit_id}downhist"] = (0.1, 5.0, 0.1, "mdi:thermometer-lines")
+    NUMBER_TYPES[f"mixer{_circuit_id}valvedeadzone"] = (0.1, 5.0, 0.1, "mdi:valve")
     NUMBER_TYPES[f"circuit{_circuit_id}tempreduction"] = (0, 15, 1, "mdi:thermometer-minus")
     NUMBER_TYPES[f"circuit{_circuit_id}minsetpointcooling"] = (
         10,

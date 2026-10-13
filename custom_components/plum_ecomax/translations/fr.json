@@ -306,6 +306,12 @@
             "circuit1basetemp": {
                 "name": "Température de base"
             },
+            "circuit1downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer1valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
+            },
             "circuit1tempreduction": {
                 "name": "Réduction nocturne"
             },
@@ -317,6 +323,12 @@
             },
             "circuit2basetemp": {
                 "name": "Température de base"
+            },
+            "circuit2downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer2valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
             },
             "circuit2tempreduction": {
                 "name": "Réduction nocturne"
@@ -330,6 +342,12 @@
             "circuit3basetemp": {
                 "name": "Température de base"
             },
+            "circuit3downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer3valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
+            },
             "circuit3tempreduction": {
                 "name": "Réduction nocturne"
             },
@@ -341,6 +359,12 @@
             },
             "circuit4basetemp": {
                 "name": "Température de base"
+            },
+            "circuit4downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer4valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
             },
             "circuit4tempreduction": {
                 "name": "Réduction nocturne"
@@ -354,11 +378,23 @@
             "circuit5basetemp": {
                 "name": "Température de base"
             },
+            "circuit5downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer5valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
+            },
             "circuit5tempreduction": {
                 "name": "Réduction nocturne"
             },
             "circuit6basetemp": {
                 "name": "Température de base"
+            },
+            "circuit6downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer6valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
             },
             "circuit6tempreduction": {
                 "name": "Réduction nocturne"
@@ -371,6 +407,12 @@
             },
             "circuit7basetemp": {
                 "name": "Température de base"
+            },
+            "circuit7downhist": {
+                "name": "Hystérésis du thermostat d'ambiance"
+            },
+            "mixer7valvedeadzone": {
+                "name": "Zone morte de la vanne mélangeuse"
             },
             "circuit7tempreduction": {
                 "name": "Réduction nocturne"

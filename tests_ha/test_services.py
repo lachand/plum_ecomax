@@ -196,3 +196,13 @@ async def test_identical_write_is_not_sent_twice(hass):
     await _call(hass, "climate", "set_temperature", {"entity_id": entity, "temperature": 21.5})
 
     assert len(_written(device, "circuit2comforttemp")) == 1  # the second call found it already set
+
+
+async def test_circuit_hysteresis_is_a_number_on_the_circuit_and_writes_its_register(hass):
+    _, device = await _loaded(hass)
+    entity = "number.circuit_2_room_thermostat_hysteresis"
+    assert hass.states.get(entity) is not None
+
+    await _call(hass, "number", "set_value", {"entity_id": entity, "value": 1.5})
+
+    assert _written(device, "circuit2downhist") == [1.5]

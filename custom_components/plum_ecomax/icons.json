@@ -201,6 +201,12 @@
             "circuit1basetemp": {
                 "default": "mdi:thermometer"
             },
+            "circuit1downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer1valvedeadzone": {
+                "default": "mdi:valve"
+            },
             "circuit1tempreduction": {
                 "default": "mdi:thermometer-minus"
             },
@@ -218,6 +224,12 @@
             },
             "circuit2basetemp": {
                 "default": "mdi:thermometer"
+            },
+            "circuit2downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer2valvedeadzone": {
+                "default": "mdi:valve"
             },
             "circuit2tempreduction": {
                 "default": "mdi:thermometer-minus"
@@ -237,6 +249,12 @@
             "circuit3basetemp": {
                 "default": "mdi:thermometer"
             },
+            "circuit3downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer3valvedeadzone": {
+                "default": "mdi:valve"
+            },
             "circuit3tempreduction": {
                 "default": "mdi:thermometer-minus"
             },
@@ -254,6 +272,12 @@
             },
             "circuit4basetemp": {
                 "default": "mdi:thermometer"
+            },
+            "circuit4downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer4valvedeadzone": {
+                "default": "mdi:valve"
             },
             "circuit4tempreduction": {
                 "default": "mdi:thermometer-minus"
@@ -273,6 +297,12 @@
             "circuit5basetemp": {
                 "default": "mdi:thermometer"
             },
+            "circuit5downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer5valvedeadzone": {
+                "default": "mdi:valve"
+            },
             "circuit5tempreduction": {
                 "default": "mdi:thermometer-minus"
             },
@@ -284,6 +314,12 @@
             },
             "circuit6basetemp": {
                 "default": "mdi:thermometer"
+            },
+            "circuit6downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer6valvedeadzone": {
+                "default": "mdi:valve"
             },
             "circuit6tempreduction": {
                 "default": "mdi:thermometer-minus"
@@ -302,6 +338,12 @@
             },
             "circuit7basetemp": {
                 "default": "mdi:thermometer"
+            },
+            "circuit7downhist": {
+                "default": "mdi:thermometer-lines"
+            },
+            "mixer7valvedeadzone": {
+                "default": "mdi:valve"
             },
             "circuit7tempreduction": {
                 "default": "mdi:thermometer-minus"

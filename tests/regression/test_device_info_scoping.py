@@ -213,14 +213,16 @@ class TestNumberRoutedToCorrectDeviceCategory:
         )
         assert self._identifier_suffix(entity) == "_hdw"
 
-    def test_mixer_slug_goes_to_mixers_device(self):
+    def test_mixer_slug_goes_to_its_circuits_device(self):
+        """Mixer N is circuit N's valve; its settings sit with the circuit, like the
+        valve-position sensor does."""
         entity = PlumEcomaxNumber(
             _coordinator(),
             SimpleNamespace(entry_id=ENTRY_A),
             "mixer2valveopeningtime",
             (0, 100, 1, "mdi:x"),
         )
-        assert self._identifier_suffix(entity) == "_mixers"
+        assert self._identifier_suffix(entity) == "_circuit_2"
 
     def test_unprefixed_slug_falls_back_to_boiler_device(self):
         entity = PlumEcomaxNumber(
