@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Configuration Plum EcoMAX",
-                "description": "Entrez les informations de connexion au module EcoNet.",
+                "description": "Entrez les informations de connexion du convertisseur RS-485 vers Ethernet/Wi-Fi (ou du module ecoNET) relié à la chaudière.",
                 "data": {
                     "ip_address": "Adresse IP",
                     "port": "Port",
@@ -13,8 +13,8 @@
                     "update_interval": "Intervalle de sondage (secondes)"
                 },
                 "data_description": {
-                    "ip_address": "Adresse IP locale du module ecoNET relié à la chaudière.",
-                    "port": "Port TCP du module ecoNET (8899 par défaut).",
+                    "ip_address": "Adresse IP locale du convertisseur RS-485 vers Ethernet/Wi-Fi (ou du module ecoNET) relié à la chaudière.",
+                    "port": "Port TCP du convertisseur (8899 par défaut).",
                     "username": "Nom d'utilisateur envoyé avec les commandes d'écriture. Les lectures ne l'utilisent pas.",
                     "password": "Mot de passe envoyé avec les commandes d'écriture. La chaudière ne le vérifie qu'à l'écriture : un mauvais mot de passe ne se voit qu'à la première écriture.",
                     "active_circuits": "Circuits de chauffage pour lesquels créer des entités. Les circuits non cochés sont ignorés.",
@@ -23,7 +23,7 @@
             },
             "reconfigure": {
                 "title": "Reconfigurer Plum EcoMAX",
-                "description": "Modifiez les informations de connexion au module EcoNet.",
+                "description": "Modifiez les informations de connexion du convertisseur RS-485 vers Ethernet/Wi-Fi (ou du module ecoNET).",
                 "data": {
                     "ip_address": "Adresse IP",
                     "port": "Port",
@@ -33,8 +33,8 @@
                     "update_interval": "Intervalle de sondage (secondes)"
                 },
                 "data_description": {
-                    "ip_address": "Adresse IP locale du module ecoNET relié à la chaudière.",
-                    "port": "Port TCP du module ecoNET (8899 par défaut).",
+                    "ip_address": "Adresse IP locale du convertisseur RS-485 vers Ethernet/Wi-Fi (ou du module ecoNET) relié à la chaudière.",
+                    "port": "Port TCP du convertisseur (8899 par défaut).",
                     "username": "Nom d'utilisateur envoyé avec les commandes d'écriture. Les lectures ne l'utilisent pas.",
                     "password": "Mot de passe envoyé avec les commandes d'écriture. La chaudière ne le vérifie qu'à l'écriture : un mauvais mot de passe ne se voit qu'à la première écriture.",
                     "active_circuits": "Circuits de chauffage pour lesquels créer des entités. Les circuits non cochés sont ignorés.",

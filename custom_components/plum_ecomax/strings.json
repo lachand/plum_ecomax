@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Plum EcoMAX Configuration",
-                "description": "Enter the EcoNet connection details.",
+                "description": "Enter the connection details of the RS-485 to Ethernet/Wi-Fi converter (or ecoNET module) wired to the boiler.",
                 "data": {
                     "ip_address": "IP Address",
                     "port": "Port",
@@ -13,8 +13,8 @@
                     "update_interval": "Polling interval (seconds)"
                 },
                 "data_description": {
-                    "ip_address": "Local IP address of the ecoNET module connected to the boiler.",
-                    "port": "TCP port of the ecoNET module (8899 by default).",
+                    "ip_address": "Local IP address of the RS-485 to Ethernet/Wi-Fi converter (or ecoNET module) connected to the boiler.",
+                    "port": "TCP port of the converter (8899 by default).",
                     "username": "User name sent with write commands. Reads do not use it.",
                     "password": "Password sent with write commands. The boiler only checks it when something is written, so a wrong password shows up on the first write.",
                     "active_circuits": "Heating circuits to create entities for. Circuits left out are skipped.",
@@ -23,7 +23,7 @@
             },
             "reconfigure": {
                 "title": "Reconfigure Plum EcoMAX",
-                "description": "Change the EcoNet connection details.",
+                "description": "Change the connection details of the RS-485 to Ethernet/Wi-Fi converter (or ecoNET module).",
                 "data": {
                     "ip_address": "IP Address",
                     "port": "Port",
@@ -33,8 +33,8 @@
                     "update_interval": "Polling interval (seconds)"
                 },
                 "data_description": {
-                    "ip_address": "Local IP address of the ecoNET module connected to the boiler.",
-                    "port": "TCP port of the ecoNET module (8899 by default).",
+                    "ip_address": "Local IP address of the RS-485 to Ethernet/Wi-Fi converter (or ecoNET module) connected to the boiler.",
+                    "port": "TCP port of the converter (8899 by default).",
                     "username": "User name sent with write commands. Reads do not use it.",
                     "password": "Password sent with write commands. The boiler only checks it when something is written, so a wrong password shows up on the first write.",
                     "active_circuits": "Heating circuits to create entities for. Circuits left out are skipped.",

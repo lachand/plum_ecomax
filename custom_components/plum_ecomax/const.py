@@ -11,7 +11,7 @@ central repository for:
 
 Attributes:
     DOMAIN (str): The integration domain ('plum_ecomax').
-    DEFAULT_PORT (int): The default TCP port for the ecoNET module (8899).
+    DEFAULT_PORT (int): The default TCP port of the RS-485 gateway (8899).
     CONF_ACTIVE_CIRCUITS (str): Configuration key for active heating circuits.
     UPDATE_INTERVAL (int): Polling interval in seconds (30).
     PLUM_TO_HA_HVAC (dict): Mapping from Plum WorkMode (0-3) to HA HVAC Modes.

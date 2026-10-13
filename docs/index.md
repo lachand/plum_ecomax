@@ -1,6 +1,6 @@
 # Bienvenue sur la doc Plum EcoMAX
 
-Cette intégration permet de connecter les chaudières **Plum** (via le module ecoNET) à **Home Assistant**.
+Cette intégration permet de connecter les chaudières **Plum** (via un convertisseur RS-485 vers Ethernet/Wi-Fi, ou le module ecoNET) à **Home Assistant**.
 
 ## Installation
 

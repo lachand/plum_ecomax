@@ -41,7 +41,7 @@ from .plum_device import DEVICE_MAP_PATH, PlumDevice
 _LOGGER = logging.getLogger(__name__)
 
 # A parameter every supported boiler exposes, used purely to prove that a
-# real ecoNET conversation (connect + framed request/response + CRC) works,
+# real GazModem/ecoNET-protocol conversation (connect + framed request/response + CRC) works,
 # not just that something is listening on the TCP port.
 _PROBE_SLUG = "hdwstate"
 
@@ -82,7 +82,7 @@ async def _probe_boiler(
 ) -> tuple[str | None, str | None]:
     """Tries an actual protocol-level read against the boiler.
 
-    This proves the IP/port really reach an ecoNET module -- not just that a
+    This proves the IP/port really reach the boiler's RS-485 gateway -- not just that a
     TCP port happens to be open -- by loading the bundled parameter map and
     reading one well-known parameter. The credentials are NOT proven here:
     reads never send them, only writes do (the boiler answers 0x7D to a bad

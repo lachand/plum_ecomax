@@ -291,7 +291,7 @@ class PlumConsecutiveFailuresSensor(_PlumLinkHealthSensor):
 class PlumRecentFailuresSensor(_PlumLinkHealthSensor):
     """Requests that got no answer (or no connection) in the last hour.
 
-    The ecoNET module ignores requests while it sends its own bursts; this counts
+    The gateway ignores requests while the bus carries the controller's own bursts; this counts
     how often that happens, so a flapping link can be told from a dead one.
     """
 

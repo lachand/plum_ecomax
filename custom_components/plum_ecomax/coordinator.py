@@ -62,7 +62,7 @@ WRITE_RETRY_DELAY = 2.0
 # a "+" button) are merged: only the last value is sent, the earlier calls return at once.
 WRITE_DEBOUNCE = 0.4
 
-# The ecoNET module sometimes ignores a whole poll cycle (it drops requests while
+# The RS-485 gateway sometimes ignores a whole poll cycle (it drops requests while
 # it sends its own bursts). A cycle that reads nothing therefore keeps serving the
 # last data for up to LINK_GRACE_CYCLES cycles in a row before the entities go
 # unavailable: a blip no longer flaps every entity nor fails the actions that run

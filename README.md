@@ -92,7 +92,7 @@ automation:
 
 Configuration is done via the **User Interface (Config Flow)**.
 You will need to provide:
-* **IP Address:** The local IP address of your ecoMAX module.
+* **IP Address:** The local IP address of the RS-485 converter (or ecoNET module) connected to your boiler.
 * **Port:** The port used for communication (default usually 8899).
 * **Username / Password:** Admin credentials for the boiler.
 * **Active Heating Circuits:** Only the circuits you select here get entities — unused circuits (1-7) in the boiler's parameter catalog are skipped.
@@ -102,7 +102,7 @@ Any of these can be changed later via **Reconfigure** on the integration card, w
 
 ## Supported devices
 
-Developed and tested against a **Plum ecoMAX 360i** through its **ecoNET** network module (local TCP, default port 8899). The parameter catalogue bundled with the integration (`device_map_ecomax360i.json`) is the 360i's. Other ecoMAX controllers that speak the same protocol may work but are untested; a parameter that a boiler does not expose is simply skipped (no entity), which is how the integration copes with a model that has fewer circuits or sensors.
+Developed and tested against a **Plum ecoMAX 360i** through an **RS-485 to Ethernet/Wi-Fi converter** (a **Hi-Flying Elfin EW11**, exposing the controller's bus as a raw TCP socket, default port 8899). The official **ecoNET** module speaks the same protocol and should work, but has not been tested. The parameter catalogue bundled with the integration (`device_map_ecomax360i.json`) is the 360i's. Other ecoMAX controllers that speak the same protocol may work but are untested; a parameter that a boiler does not expose is simply skipped (no entity), which is how the integration copes with a model that has fewer circuits or sensors.
 
 ## Entities and actions
 
@@ -120,7 +120,7 @@ Two actions are registered: **`plum_ecomax.set_schedule`** (rewrite a weekly pro
 
 ## Data updates
 
-The integration polls the boiler locally. The interval is configurable (10-300 s, 30 s by default). Live telemetry is re-read every cycle; setpoints, curves and schedules are cached for about five minutes (a write refreshes them). Reads are batched (several parameters per request) over one TCP connection kept open between polls. A single ignored poll cycle (the module drops requests while it sends its own bursts) is absorbed: the last values are kept for up to two cycles in a row. Beyond that, entities become *unavailable*, the outage is logged once, a repair issue is raised, and the polling interval doubles up to five minutes until the boiler answers again.
+The integration polls the boiler locally. The interval is configurable (10-300 s, 30 s by default). Live telemetry is re-read every cycle; setpoints, curves and schedules are cached for about five minutes (a write refreshes them). Reads are batched (several parameters per request) over one TCP connection kept open between polls. A single ignored poll cycle (requests sent while the controller emits its own bursts often go unanswered) is absorbed: the last values are kept for up to two cycles in a row. Beyond that, entities become *unavailable*, the outage is logged once, a repair issue is raised, and the polling interval doubles up to five minutes until the boiler answers again.
 
 ## Removing the integration
 
@@ -128,16 +128,17 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 
 ## Troubleshooting
 
-* **Cannot connect / entry keeps retrying:** check the IP address and port, and that no other client is using the module. The ecoNET module answers the requests of **one client at a time** (with two connections open, only the most recent one was answered in tests), so the ecoNET app, another Home Assistant or a script on the same module will starve the integration.
-* **Occasional slow or missing readings:** the module ignores requests that arrive while it is emitting its bursts of unsolicited frames (a sizeable share of requests during measurements). The integration skips those frames, keeps the connection and retries; the *consecutive failures* sensor shows how often it happens.
+* **Cannot connect / entry keeps retrying:** check the IP address and port, and that no other client is using the converter. In tests the converter answered the requests of **one client at a time** (with two connections open, only the most recent one was answered), so the ecoNET app, another Home Assistant or a script on the same converter will starve the integration.
+* **Occasional slow or missing readings:** requests that arrive while the controller is emitting its bursts of unsolicited frames often get no answer (a sizeable share of requests during measurements; the *failed requests (last hour)* sensor counts them). The integration skips those frames, keeps the connection and retries; the *consecutive failures* sensor shows how often it happens.
 * **Everything is *unavailable*:** the boiler is unreachable. A "connection lost" repair issue appears in Settings → Repairs and clears by itself when communication returns.
-* **An action fails with "did not confirm" / "rejected":** the boiler did not apply the write. "Rejected" comes with the boiler's error code (0x7D means authentication, and a "write rejected" repair issue is raised): check the user name and password with **Reconfigure**. Reads never send the password, so a wrong one only shows on the first write. "Did not confirm" usually means the module ignored the request (see the previous point): try again.
+* **An action fails with "did not confirm" / "rejected":** the boiler did not apply the write. "Rejected" comes with the boiler's error code (0x7D means authentication, and a "write rejected" repair issue is raised): check the user name and password with **Reconfigure**. Reads never send the password, so a wrong one only shows on the first write. "Did not confirm" usually means the request got no answer (see the previous point): try again.
+* **The circuit's pump / mixing valve does not start although rooms ask for heat:** the controller starts a circuit only when its room temperature is below the circuit setpoint **minus the hysteresis** (`Room Thermostat Hysteresis` number on the circuit device, 1.0 K on the reference boiler). A forcing setpoint only slightly above the room temperature (for example +0.9 K with a 1.0 K hysteresis) never starts it; keep the margin above the hysteresis plus 0.25 K for rounding. The buffer tank is rarely the cause: the circuits only wait for the tank to exceed about 21 °C (`BuforTempStartHydraulic`, 2 K hysteresis) and the heat source for 20 °C (`HeatSourceMinSupplyTemp`) on the reference boiler.
 * **Manual mode stuck:** if the integration cannot return the boiler to automatic after a solar-dump session, a `manual_mode_stuck` repair issue is raised; switch the controller back to automatic on its panel.
 * **More detail:** download the redacted diagnostics from the device page, and enable debug logging with `logger: logs: custom_components.plum_ecomax: debug` in `configuration.yaml`.
 
 ## Known limitations
 
-* One boiler per module address; the integration is configured by IP, there is no automatic discovery.
+* One boiler per converter address; the integration is configured by IP, there is no automatic discovery.
 * The active circuits are chosen in the configuration; the integration does not add circuits by itself.
 * The password is only used, and only checked by the boiler, when something is written.
 * While a solar-dump session runs, the boiler is in manual mode and its automatic regulation is off. The return to automatic is guaranteed on the timer, on unload and on Home Assistant shutdown, but a boiler restarted or disconnected in the middle of a session is not under the integration's control.
@@ -152,7 +153,7 @@ Unit and regression tests live in `tests/` (`pytest tests/`); tests that run aga
 
 No entity to reconfigure. Behaviour changes:
 
-* **A short outage no longer makes everything unavailable.** When a poll cycle gets no answer (the module drops requests while it sends its own bursts), the last values are kept for up to two cycles in a row; only a longer outage turns entities *unavailable*.
+* **A short outage no longer makes everything unavailable.** When a poll cycle gets no answer (requests sent while the controller emits its own bursts often go unanswered), the last values are kept for up to two cycles in a row; only a longer outage turns entities *unavailable*.
 * **Identical writes are skipped.** Setting a value the boiler already holds (confirmed by a fresh read) sends nothing, and rapid successive writes to the same setting are merged into the last one. A write call now takes a fraction of a second longer to start.
 * **The circuit thermostat reports `hvac_action`**: *heating* while the circuit's mixing valve is open, *idle* when closed, *off* when the circuit is off.
 * **New diagnostic sensors:** "failed requests (last hour)" and "poll duration" (to tell a flapping link from a dead one), and, disabled by default, a raw "pump" register and a "calculated temperature" per circuit (what they hold is not documented by the manufacturer; they are there for troubleshooting). Restart Home Assistant after updating.
@@ -161,7 +162,7 @@ No entity to reconfigure. Behaviour changes:
 
 First stable release: every rule of the Home Assistant integration quality scale is met or justified as not applicable (see `custom_components/plum_ecomax/quality_scale.yaml`, a self-assessment). Nothing to reconfigure, but three behaviours change from 0.8.x:
 
-* **Actions can now fail.** A command that changes a boiler setting waits for the boiler's confirmation; if it never confirms, the previous value is restored and the action reports *"The boiler did not confirm writing …"* (or *"rejected"*, with the boiler's code). Before, the call always looked successful and the outcome was only visible in the logs. The ecoNET module ignores some requests (see Troubleshooting), so an occasional "did not confirm" is expected: try again.
+* **Actions can now fail.** A command that changes a boiler setting waits for the boiler's confirmation; if it never confirms, the previous value is restored and the action reports *"The boiler did not confirm writing …"* (or *"rejected"*, with the boiler's code). Before, the call always looked successful and the outcome was only visible in the logs. The link drops some requests (see Troubleshooting), so an occasional "did not confirm" is expected: try again.
 * **`plum_ecomax.set_schedule` and `plum_ecomax.solar_to_buffer` stay registered** as long as the integration is set up, and refuse to run with a clear message when no boiler is loaded, a circuit is not active, or the boiler exposes no such schedule.
 * **Raw diagnostic registers are created disabled** on new installs (alarm-detection settings, work states, circulation state); existing entities are untouched. The alarm bits stay enabled.
 
@@ -173,7 +174,7 @@ Internal restructuring, **no behaviour change** and no new entities. The three l
 
 ### Upgrading to 0.8.4
 
-Faster and more reliable communication with the boiler, no new entities. The ecoNET module streams unsolicited frames and duplicates of its own answers on the same connection; the driver used to take the first one for the answer, judge the stream desynchronised and reconnect (about a second each time on this module). Answers are now matched by command and echoed session id and the rest is skipped: on a real boiler the initial parameter scan drops from ~7 s with 3-4 reconnections to ~3.4 s with none. Also: a short (valid but incomplete) batch answer is no longer retried, the first timeout keeps the connection (a second consecutive failure closes it), and answer timeouts are 1.5 s / 2 s instead of 2-3 s. The write path (manual mode, DHW pump force, return to automatic on unload) was checked against a real boiler. Note that the module accepts one connection at a time: don't run a second client (another Home Assistant, a script) against the same boiler while measuring. Restart Home Assistant after updating.
+Faster and more reliable communication with the boiler, no new entities. The gateway streams unsolicited frames and duplicates of the controller's own answers on the same connection; the driver used to take the first one for the answer, judge the stream desynchronised and reconnect (about a second each time on this module). Answers are now matched by command and echoed session id and the rest is skipped: on a real boiler the initial parameter scan drops from ~7 s with 3-4 reconnections to ~3.4 s with none. Also: a short (valid but incomplete) batch answer is no longer retried, the first timeout keeps the connection (a second consecutive failure closes it), and answer timeouts are 1.5 s / 2 s instead of 2-3 s. The write path (manual mode, DHW pump force, return to automatic on unload) was checked against a real boiler. Note that the module accepts one connection at a time: don't run a second client (another Home Assistant, a script) against the same boiler while measuring. Restart Home Assistant after updating.
 
 ### Upgrading to 0.8.3
 

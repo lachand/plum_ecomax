@@ -68,7 +68,7 @@ class PlumDevice:
         """Initializes the PlumDevice driver.
 
         Args:
-            ip: The IP address of the ecoNET module.
+            ip: The IP address of the RS-485 gateway (converter or ecoNET module).
             port: The TCP port (default 8899).
             password: The device password (default "0000").
             user: The username for authentication (default "admin").
