@@ -253,6 +253,33 @@
             },
             "solar_dump_runtime_today": {
                 "name": "Czas pracy pompy rozładowania solarnego dzisiaj"
+            },
+            "heatsourcemainpumpstate": {
+                "name": "Stan pompy źródła ciepła (surowy)"
+            },
+            "heatsourcemainpumpsett": {
+                "name": "Ustawienie pompy źródła ciepła (surowe)"
+            },
+            "heatsourcemainpumpext": {
+                "name": "Pompa źródła ciepła zewnętrzna (surowa)"
+            },
+            "heatsourcecontactstate": {
+                "name": "Stan styku źródła ciepła (surowy)"
+            },
+            "currentsourcework": {
+                "name": "Bieżąca praca źródła (surowa)"
+            },
+            "worktime": {
+                "name": "Czas pracy"
+            },
+            "periodicworktime": {
+                "name": "Okresowy czas pracy"
+            },
+            "sourcetempatstart": {
+                "name": "Temperatura źródła przy starcie (surowa)"
+            },
+            "temppowgz": {
+                "name": "Temperatura PowGz (surowa)"
             }
         },
         "binary_sensor": {

@@ -51,6 +51,14 @@ class TestValidateValue:
         assert _validate("tempprobe", 250) == (False, None)
         assert _validate("pressure_bar", 6.0) == (False, None)
 
+    def test_raw_diagnostic_registers_are_exempt_from_the_generic_ranges(self):
+        # "temppowgz" contains "temp" but is an undocumented raw register: a value outside a
+        # temperature range must still come through, or the sensor would hide what it is for.
+        assert validate_value({}, "temppowgz", 250, None, {}) == (True, 250)
+        assert validate_value({}, "sourcetempatstart", -80.0, None, {}) == (True, -80.0)
+        # a name that is not a diagnostic register keeps the rule
+        assert validate_value({}, "tempx", 250, None, {}) == (False, None)
+
     def test_a_slug_with_no_rule_passes(self):
         assert _validate("free", 12345) == (True, 12345)
 

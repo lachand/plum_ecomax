@@ -165,6 +165,33 @@
             },
             "solar_dump_runtime_today": {
                 "default": "mdi:timer-play-outline"
+            },
+            "heatsourcemainpumpstate": {
+                "default": "mdi:pump"
+            },
+            "heatsourcemainpumpsett": {
+                "default": "mdi:pump"
+            },
+            "heatsourcemainpumpext": {
+                "default": "mdi:pump"
+            },
+            "heatsourcecontactstate": {
+                "default": "mdi:electric-switch"
+            },
+            "currentsourcework": {
+                "default": "mdi:fire"
+            },
+            "worktime": {
+                "default": "mdi:timer-outline"
+            },
+            "periodicworktime": {
+                "default": "mdi:timer-sand"
+            },
+            "sourcetempatstart": {
+                "default": "mdi:thermometer-auto"
+            },
+            "temppowgz": {
+                "default": "mdi:thermometer-auto"
             }
         },
         "number": {

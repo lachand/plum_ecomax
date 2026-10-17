@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import EntityCategory
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -244,6 +245,30 @@ async def test_link_diagnostics_and_the_circuit_registers_are_created(hass):
         assert hass.states.get(entity.entity_id) is not None
     for key in ("circuit2pumpdebug", "circuit2calctemp"):  # raw registers: off until enabled
         assert by_unique_id[prefix + key].disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+async def test_boiler_state_candidate_registers_are_created_disabled(hass):
+    entry = await _setup(hass)
+    registry = er.async_get(hass)
+    by_unique_id = {
+        e.unique_id: e for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+    prefix = f"{DOMAIN}_{entry.entry_id}_"
+
+    for key in (
+        "heatsourcemainpumpstate",
+        "heatsourcemainpumpsett",
+        "heatsourcemainpumpext",
+        "heatsourcecontactstate",
+        "currentsourcework",
+        "worktime",
+        "periodicworktime",
+        "sourcetempatstart",
+        "temppowgz",
+    ):
+        entity = by_unique_id[prefix + key]
+        assert entity.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+        assert entity.entity_category is EntityCategory.DIAGNOSTIC
 
 
 async def test_circuit_thermostat_reports_heating_from_the_mixing_valve(hass):

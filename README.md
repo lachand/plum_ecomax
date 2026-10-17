@@ -143,12 +143,19 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 * The active circuits are chosen in the configuration; the integration does not add circuits by itself.
 * The password is only used, and only checked by the boiler, when something is written.
 * While a solar-dump session runs, the boiler is in manual mode and its automatic regulation is off. The return to automatic is guaranteed on the timer, on unload and on Home Assistant shutdown, but a boiler restarted or disconnected in the middle of a session is not under the integration's control.
-* The raw diagnostic registers (alarm-detection settings, work states, circulation state) are created **disabled** on new installs; enable them from the entity's settings when troubleshooting. Existing installs keep their entities as they are.
+* The raw diagnostic registers (alarm-detection settings, work states, circulation state, and the boiler-state candidates listed under *Upgrading to 1.3.0*) are created **disabled** on new installs; enable them from the entity's settings when troubleshooting. Existing installs keep their entities as they are.
 * Tested on one boiler model (see *Supported devices*).
 
 ## Development
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
+
+### Upgrading to 1.3.0
+
+No reconfiguration needed. Restart Home Assistant after updating.
+
+* **Nine raw registers that may follow the boiler's own state**, as diagnostic sensors **disabled by default** (enable them from the entity's settings): heat-source pump state / setting / external, heat-source contact state, current source work, work time, periodic work time, source temperature at start, and "temperature PowGz". The registers already exposed (work states, boiler power) stay constant through a burn, so none of them tells ignition from heating or from the post-burn pump. These are the candidates; what they hold is not documented, so their meaning is for you to confirm by recording them during a burn.
+* The generic plausibility range ("temp" in the name means −20…100) no longer applies to raw diagnostic registers, so an unexpected value is shown instead of being dropped.
 
 ### Upgrading to 1.2.0
 

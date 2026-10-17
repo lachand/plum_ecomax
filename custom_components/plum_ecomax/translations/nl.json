@@ -253,6 +253,33 @@
             },
             "solar_dump_runtime_today": {
                 "name": "Looptijd circulatiepomp zonne-ontlading vandaag"
+            },
+            "heatsourcemainpumpstate": {
+                "name": "Status pomp warmtebron (ruw)"
+            },
+            "heatsourcemainpumpsett": {
+                "name": "Instelling pomp warmtebron (ruw)"
+            },
+            "heatsourcemainpumpext": {
+                "name": "Pomp warmtebron extern (ruw)"
+            },
+            "heatsourcecontactstate": {
+                "name": "Status contact warmtebron (ruw)"
+            },
+            "currentsourcework": {
+                "name": "Huidige bronwerking (ruw)"
+            },
+            "worktime": {
+                "name": "Werktijd"
+            },
+            "periodicworktime": {
+                "name": "Periodieke werktijd"
+            },
+            "sourcetempatstart": {
+                "name": "Brontemperatuur bij start (ruw)"
+            },
+            "temppowgz": {
+                "name": "Temperatuur PowGz (ruw)"
             }
         },
         "binary_sensor": {

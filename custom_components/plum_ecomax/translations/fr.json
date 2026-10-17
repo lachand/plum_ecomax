@@ -253,6 +253,33 @@
             },
             "solar_dump_runtime_today": {
                 "name": "Décharge solaire — temps circulateur aujourd'hui"
+            },
+            "heatsourcemainpumpstate": {
+                "name": "État pompe source de chaleur (brut)"
+            },
+            "heatsourcemainpumpsett": {
+                "name": "Réglage pompe source de chaleur (brut)"
+            },
+            "heatsourcemainpumpext": {
+                "name": "Pompe source de chaleur externe (brut)"
+            },
+            "heatsourcecontactstate": {
+                "name": "État contact source de chaleur (brut)"
+            },
+            "currentsourcework": {
+                "name": "Fonctionnement source en cours (brut)"
+            },
+            "worktime": {
+                "name": "Temps de fonctionnement"
+            },
+            "periodicworktime": {
+                "name": "Temps de fonctionnement périodique"
+            },
+            "sourcetempatstart": {
+                "name": "Température source au démarrage (brut)"
+            },
+            "temppowgz": {
+                "name": "Température PowGz (brut)"
             }
         },
         "binary_sensor": {

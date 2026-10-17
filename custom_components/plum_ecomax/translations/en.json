@@ -253,6 +253,33 @@
             },
             "solar_dump_runtime_today": {
                 "name": "Solar dump circulator runtime today"
+            },
+            "heatsourcemainpumpstate": {
+                "name": "Heat source pump state (raw)"
+            },
+            "heatsourcemainpumpsett": {
+                "name": "Heat source pump setting (raw)"
+            },
+            "heatsourcemainpumpext": {
+                "name": "Heat source pump external (raw)"
+            },
+            "heatsourcecontactstate": {
+                "name": "Heat source contact state (raw)"
+            },
+            "currentsourcework": {
+                "name": "Current source work (raw)"
+            },
+            "worktime": {
+                "name": "Work time"
+            },
+            "periodicworktime": {
+                "name": "Periodic work time"
+            },
+            "sourcetempatstart": {
+                "name": "Source temperature at start (raw)"
+            },
+            "temppowgz": {
+                "name": "Temperature PowGz (raw)"
             }
         },
         "binary_sensor": {

@@ -11,6 +11,7 @@ from .const import (
     ALARM_BITMASK_SLUGS,
     CLIMATE_TYPES,
     DEVICE_INFO_PARAMS,
+    DIAGNOSTIC_SENSOR_SLUGS,
     MANUAL_MODE_SLUG,
     NUMBER_TYPES,
     SCHEDULE_TYPES,
@@ -106,8 +107,10 @@ def validate_value(
         rejection_counts.pop(slug, None)
         return True, raw_val
 
-    # C. Generic bounds check (Fallback)
-    if isinstance(raw_val, (int, float)):
+    # C. Generic bounds check (Fallback). Raw diagnostic registers are exempt: their
+    # meaning is unknown, so a name that happens to contain "temp" is no proof of a
+    # temperature, and rejecting an odd value would hide exactly what they are for.
+    if slug not in DIAGNOSTIC_SENSOR_SLUGS and isinstance(raw_val, (int, float)):
         for keyword, (min_v, max_v) in VALIDATION_RANGES.items():
             if keyword in slug:
                 if not (min_v <= raw_val <= max_v):

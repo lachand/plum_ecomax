@@ -24,6 +24,7 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfPower,
     UnitOfTemperature,
+    UnitOfTime,
 )
 
 # --- OPERATING MODE (pid 161) + solar-dump service ---
@@ -329,6 +330,19 @@ SENSOR_TYPES: dict[str, list[Any]] = {
     "circuit6calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
     "circuit7pumpdebug": [None, "mdi:pump", None],
     "circuit7calctemp": [UnitOfTemperature.CELSIUS, "mdi:thermometer-auto", "temperature"],
+    # Boiler-state candidates (1.3.0). The boiler's own screen shows the return-raising pump, the
+    # extraction fan and the heat-exchanger cleaning, but none of the registers already exposed moves
+    # with them (workstate2-4 and the boiler power stay constant through a burn). These are the
+    # registers that might: raw, undocumented, disabled by default, there to be compared with a burn.
+    "heatsourcemainpumpstate": [None, "mdi:pump", None],
+    "heatsourcemainpumpsett": [None, "mdi:pump", None],
+    "heatsourcemainpumpext": [None, "mdi:pump", None],
+    "heatsourcecontactstate": [None, "mdi:electric-switch", None],
+    "currentsourcework": [None, "mdi:fire", None],
+    "worktime": [UnitOfTime.SECONDS, "mdi:timer-outline", "duration"],
+    "periodicworktime": [UnitOfTime.SECONDS, "mdi:timer-sand", "duration"],
+    "sourcetempatstart": [None, "mdi:thermometer-auto", None],
+    "temppowgz": [None, "mdi:thermometer-auto", None],
 }
 
 # SENSOR_TYPES slugs shown in the device's "Diagnostic" section instead of
@@ -351,6 +365,15 @@ DIAGNOSTIC_SENSOR_SLUGS = {
     "circuit6calctemp",
     "circuit7pumpdebug",
     "circuit7calctemp",
+    "heatsourcemainpumpstate",
+    "heatsourcemainpumpsett",
+    "heatsourcemainpumpext",
+    "heatsourcecontactstate",
+    "currentsourcework",
+    "worktime",
+    "periodicworktime",
+    "sourcetempatstart",
+    "temppowgz",
 }
 
 # --- THERMOSTATS ---
