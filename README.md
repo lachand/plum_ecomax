@@ -150,6 +150,13 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 1.4.0
+
+No reconfiguration needed. Restart Home Assistant after updating.
+
+* **Registers that follow a DHW reload, as diagnostic sensors disabled by default** (enable them from the entity's settings): *DHW state (raw)* (`hdwstate`), *DHW state 2 (raw)* (`hdwdbstate`), *DHW load target (raw)* (`dhwsettemp`), *Heat source calculated setpoint (raw)* (`heatsourcecalcpresettemp`), and, on each active circuit's device, *State (raw)* and *Mixer state (raw)*. On one boiler, during a forced DHW reload (DHW 42 → 45 °C in three minutes) the *Pump DHW* sensor stayed at 0 while `hdwstate` went from 128 to 328338 (bits 1, 4, 9, 16 and 18 set) and back to 128 when the setpoint was reached; `hdwdbstate` went 0 → 6, `dhwsettemp` 0 → 45 and the circuit 2 mixer state 0 → 7. What each bit means is not documented: these are there to find out which one is the DHW pump, by recording them during a reload or a normal DHW load.
+* The extra registers add one request frame to each poll cycle.
+
 ### Upgrading to 1.3.0
 
 No reconfiguration needed. Restart Home Assistant after updating.

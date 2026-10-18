@@ -280,6 +280,60 @@
             },
             "temppowgz": {
                 "name": "Temperatuur PowGz (ruw)"
+            },
+            "hdwstate": {
+                "name": "Status warm tapwater (ruw)"
+            },
+            "hdwdbstate": {
+                "name": "Status warm tapwater 2 (ruw)"
+            },
+            "dhwsettemp": {
+                "name": "Laaddoel warm tapwater (ruw)"
+            },
+            "heatsourcecalcpresettemp": {
+                "name": "Berekend setpoint warmtebron (ruw)"
+            },
+            "circuit1state": {
+                "name": "Status (ruw)"
+            },
+            "circuit1mixerstate": {
+                "name": "Status mengklep (ruw)"
+            },
+            "circuit2state": {
+                "name": "Status (ruw)"
+            },
+            "circuit2mixerstate": {
+                "name": "Status mengklep (ruw)"
+            },
+            "circuit3state": {
+                "name": "Status (ruw)"
+            },
+            "circuit3mixerstate": {
+                "name": "Status mengklep (ruw)"
+            },
+            "circuit4state": {
+                "name": "Status (ruw)"
+            },
+            "circuit4mixerstate": {
+                "name": "Status mengklep (ruw)"
+            },
+            "circuit5state": {
+                "name": "Status (ruw)"
+            },
+            "circuit5mixerstate": {
+                "name": "Status mengklep (ruw)"
+            },
+            "circuit6state": {
+                "name": "Status (ruw)"
+            },
+            "circuit6mixerstate": {
+                "name": "Status mengklep (ruw)"
+            },
+            "circuit7state": {
+                "name": "Status (ruw)"
+            },
+            "circuit7mixerstate": {
+                "name": "Status mengklep (ruw)"
             }
         },
         "binary_sensor": {

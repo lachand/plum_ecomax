@@ -280,6 +280,60 @@
             },
             "temppowgz": {
                 "name": "Temperature PowGz (raw)"
+            },
+            "hdwstate": {
+                "name": "DHW state (raw)"
+            },
+            "hdwdbstate": {
+                "name": "DHW state 2 (raw)"
+            },
+            "dhwsettemp": {
+                "name": "DHW load target (raw)"
+            },
+            "heatsourcecalcpresettemp": {
+                "name": "Heat source calculated setpoint (raw)"
+            },
+            "circuit1state": {
+                "name": "State (raw)"
+            },
+            "circuit1mixerstate": {
+                "name": "Mixer state (raw)"
+            },
+            "circuit2state": {
+                "name": "State (raw)"
+            },
+            "circuit2mixerstate": {
+                "name": "Mixer state (raw)"
+            },
+            "circuit3state": {
+                "name": "State (raw)"
+            },
+            "circuit3mixerstate": {
+                "name": "Mixer state (raw)"
+            },
+            "circuit4state": {
+                "name": "State (raw)"
+            },
+            "circuit4mixerstate": {
+                "name": "Mixer state (raw)"
+            },
+            "circuit5state": {
+                "name": "State (raw)"
+            },
+            "circuit5mixerstate": {
+                "name": "Mixer state (raw)"
+            },
+            "circuit6state": {
+                "name": "State (raw)"
+            },
+            "circuit6mixerstate": {
+                "name": "Mixer state (raw)"
+            },
+            "circuit7state": {
+                "name": "State (raw)"
+            },
+            "circuit7mixerstate": {
+                "name": "Mixer state (raw)"
             }
         },
         "binary_sensor": {

@@ -343,6 +343,29 @@ SENSOR_TYPES: dict[str, list[Any]] = {
     "periodicworktime": [UnitOfTime.SECONDS, "mdi:timer-sand", "duration"],
     "sourcetempatstart": [None, "mdi:thermometer-auto", None],
     "temppowgz": [None, "mdi:thermometer-auto", None],
+    # DHW loading and per-circuit state registers (1.4.0). During a forced DHW reload on the real boiler
+    # (hdwstartoneloading = 1, DHW 42 -> 45 degC in 3 min) hdwpumpstate stayed at 0 while these moved:
+    # hdwstate 128 -> 328338 (bits 1, 4, 9, 16, 18 set) and back to 128 when the setpoint was reached,
+    # hdwdbstate 0 -> 6, dhwsettemp 0 -> 45, circuit2mixerstate 0 -> 7, heatsourcecalcpresettemp 65 -> 70.
+    # Raw and undocumented: diagnostic sensors, disabled by default, to find out which bit is the DHW pump.
+    "hdwstate": [None, "mdi:water-boiler", None],
+    "hdwdbstate": [None, "mdi:water-boiler", None],
+    "dhwsettemp": [None, "mdi:target", None],
+    "heatsourcecalcpresettemp": [None, "mdi:thermometer-auto", None],
+    "circuit1state": [None, "mdi:radiator", None],
+    "circuit1mixerstate": [None, "mdi:valve", None],
+    "circuit2state": [None, "mdi:radiator", None],
+    "circuit2mixerstate": [None, "mdi:valve", None],
+    "circuit3state": [None, "mdi:radiator", None],
+    "circuit3mixerstate": [None, "mdi:valve", None],
+    "circuit4state": [None, "mdi:radiator", None],
+    "circuit4mixerstate": [None, "mdi:valve", None],
+    "circuit5state": [None, "mdi:radiator", None],
+    "circuit5mixerstate": [None, "mdi:valve", None],
+    "circuit6state": [None, "mdi:radiator", None],
+    "circuit6mixerstate": [None, "mdi:valve", None],
+    "circuit7state": [None, "mdi:radiator", None],
+    "circuit7mixerstate": [None, "mdi:valve", None],
 }
 
 # SENSOR_TYPES slugs shown in the device's "Diagnostic" section instead of
@@ -374,6 +397,24 @@ DIAGNOSTIC_SENSOR_SLUGS = {
     "periodicworktime",
     "sourcetempatstart",
     "temppowgz",
+    "hdwstate",
+    "hdwdbstate",
+    "dhwsettemp",
+    "heatsourcecalcpresettemp",
+    "circuit1state",
+    "circuit1mixerstate",
+    "circuit2state",
+    "circuit2mixerstate",
+    "circuit3state",
+    "circuit3mixerstate",
+    "circuit4state",
+    "circuit4mixerstate",
+    "circuit5state",
+    "circuit5mixerstate",
+    "circuit6state",
+    "circuit6mixerstate",
+    "circuit7state",
+    "circuit7mixerstate",
 }
 
 # --- THERMOSTATS ---

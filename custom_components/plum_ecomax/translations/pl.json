@@ -280,6 +280,60 @@
             },
             "temppowgz": {
                 "name": "Temperatura PowGz (surowa)"
+            },
+            "hdwstate": {
+                "name": "Stan CWU (surowy)"
+            },
+            "hdwdbstate": {
+                "name": "Stan CWU 2 (surowy)"
+            },
+            "dhwsettemp": {
+                "name": "Cel ładowania CWU (surowy)"
+            },
+            "heatsourcecalcpresettemp": {
+                "name": "Obliczona temperatura zadana źródła (surowa)"
+            },
+            "circuit1state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit1mixerstate": {
+                "name": "Stan mieszacza (surowy)"
+            },
+            "circuit2state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit2mixerstate": {
+                "name": "Stan mieszacza (surowy)"
+            },
+            "circuit3state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit3mixerstate": {
+                "name": "Stan mieszacza (surowy)"
+            },
+            "circuit4state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit4mixerstate": {
+                "name": "Stan mieszacza (surowy)"
+            },
+            "circuit5state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit5mixerstate": {
+                "name": "Stan mieszacza (surowy)"
+            },
+            "circuit6state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit6mixerstate": {
+                "name": "Stan mieszacza (surowy)"
+            },
+            "circuit7state": {
+                "name": "Stan (surowy)"
+            },
+            "circuit7mixerstate": {
+                "name": "Stan mieszacza (surowy)"
             }
         },
         "binary_sensor": {

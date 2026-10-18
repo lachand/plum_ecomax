@@ -192,6 +192,60 @@
             },
             "temppowgz": {
                 "default": "mdi:thermometer-auto"
+            },
+            "hdwstate": {
+                "default": "mdi:water-boiler"
+            },
+            "hdwdbstate": {
+                "default": "mdi:water-boiler"
+            },
+            "dhwsettemp": {
+                "default": "mdi:target"
+            },
+            "heatsourcecalcpresettemp": {
+                "default": "mdi:thermometer-auto"
+            },
+            "circuit1state": {
+                "default": "mdi:radiator"
+            },
+            "circuit1mixerstate": {
+                "default": "mdi:valve"
+            },
+            "circuit2state": {
+                "default": "mdi:radiator"
+            },
+            "circuit2mixerstate": {
+                "default": "mdi:valve"
+            },
+            "circuit3state": {
+                "default": "mdi:radiator"
+            },
+            "circuit3mixerstate": {
+                "default": "mdi:valve"
+            },
+            "circuit4state": {
+                "default": "mdi:radiator"
+            },
+            "circuit4mixerstate": {
+                "default": "mdi:valve"
+            },
+            "circuit5state": {
+                "default": "mdi:radiator"
+            },
+            "circuit5mixerstate": {
+                "default": "mdi:valve"
+            },
+            "circuit6state": {
+                "default": "mdi:radiator"
+            },
+            "circuit6mixerstate": {
+                "default": "mdi:valve"
+            },
+            "circuit7state": {
+                "default": "mdi:radiator"
+            },
+            "circuit7mixerstate": {
+                "default": "mdi:valve"
             }
         },
         "number": {

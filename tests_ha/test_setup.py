@@ -271,6 +271,30 @@ async def test_boiler_state_candidate_registers_are_created_disabled(hass):
         assert entity.entity_category is EntityCategory.DIAGNOSTIC
 
 
+async def test_dhw_loading_and_circuit_state_registers_are_created_disabled(hass):
+    entry = await _setup(hass)
+    registry = er.async_get(hass)
+    by_unique_id = {
+        e.unique_id: e for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+    prefix = f"{DOMAIN}_{entry.entry_id}_"
+
+    # boiler-level registers, plus the two per-circuit ones for the active circuit (2 in the fake entry)
+    for key in (
+        "hdwstate",
+        "hdwdbstate",
+        "dhwsettemp",
+        "heatsourcecalcpresettemp",
+        "circuit2state",
+        "circuit2mixerstate",
+    ):
+        entity = by_unique_id[prefix + key]
+        assert entity.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+        assert entity.entity_category is EntityCategory.DIAGNOSTIC
+    # circuits that are not active get no entity
+    assert prefix + "circuit5state" not in by_unique_id
+
+
 async def test_circuit_thermostat_reports_heating_from_the_mixing_valve(hass):
     FakePlumDevice.values["mixer2valveposition"] = 40.0
     await _setup(hass)

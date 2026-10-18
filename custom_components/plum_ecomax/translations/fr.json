@@ -280,6 +280,60 @@
             },
             "temppowgz": {
                 "name": "Température PowGz (brut)"
+            },
+            "hdwstate": {
+                "name": "État ECS (brut)"
+            },
+            "hdwdbstate": {
+                "name": "État ECS 2 (brut)"
+            },
+            "dhwsettemp": {
+                "name": "Cible de charge ECS (brut)"
+            },
+            "heatsourcecalcpresettemp": {
+                "name": "Consigne calculée source de chaleur (brut)"
+            },
+            "circuit1state": {
+                "name": "État (brut)"
+            },
+            "circuit1mixerstate": {
+                "name": "État mélangeur (brut)"
+            },
+            "circuit2state": {
+                "name": "État (brut)"
+            },
+            "circuit2mixerstate": {
+                "name": "État mélangeur (brut)"
+            },
+            "circuit3state": {
+                "name": "État (brut)"
+            },
+            "circuit3mixerstate": {
+                "name": "État mélangeur (brut)"
+            },
+            "circuit4state": {
+                "name": "État (brut)"
+            },
+            "circuit4mixerstate": {
+                "name": "État mélangeur (brut)"
+            },
+            "circuit5state": {
+                "name": "État (brut)"
+            },
+            "circuit5mixerstate": {
+                "name": "État mélangeur (brut)"
+            },
+            "circuit6state": {
+                "name": "État (brut)"
+            },
+            "circuit6mixerstate": {
+                "name": "État mélangeur (brut)"
+            },
+            "circuit7state": {
+                "name": "État (brut)"
+            },
+            "circuit7mixerstate": {
+                "name": "État mélangeur (brut)"
             }
         },
         "binary_sensor": {
