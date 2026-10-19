@@ -248,13 +248,13 @@ DHW_BINARY_SENSORS: dict[str, tuple[str, str, int, bool]] = {
 }
 
 
-def dhw_binary_state(raw: object, mode: str, value: int) -> bool | None:
+def dhw_binary_state(raw: Any, mode: str, value: int) -> bool | None:
     """Decodes one DHW binary sensor from its raw register value (None if unreadable)."""
     try:
-        number = int(raw)  # type: ignore[call-overload]
+        number = int(raw)
     except (TypeError, ValueError):
         return None
-    return (number & value) != 0 if mode == "mask" else number == value
+    return bool(number & value) if mode == "mask" else number == value
 
 
 # Alarm bitmask registers (DP_INVENTORY.md "Alarmes & bits de diagnostic").
