@@ -1,6 +1,6 @@
 """Binary sensor platform for the Plum EcoMAX integration.
 
-Exposes two families of read-only boolean state, both derived from raw
+Exposes three families of read-only boolean state, all derived from raw
 registers that don't have a dedicated per-state parameter on the wire:
 
 * "Manual mode active" (MANUAL_MODE_SLUG/MANUAL_MODE_BIT in const.py) --
@@ -12,6 +12,9 @@ registers that don't have a dedicated per-state parameter on the wire:
 * Alarm bitmask registers (ALARM_BITMASK_SLUGS in const.py) as
   BinarySensorDeviceClass.PROBLEM -- "some bit is set" rather than decoded
   individual bits, whose meaning isn't documented or empirically verified.
+* DHW state (DHW_BINARY_SENSORS in const.py) -- loading, outside the charging
+  window, recirculation pump -- decoded from hdwstate / circulationstate and
+  disabled by default.
 """
 
 import logging
@@ -29,7 +32,14 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ALARM_BITMASK_SLUGS, DOMAIN, MANUAL_MODE_BIT, MANUAL_MODE_SLUG
+from .const import (
+    ALARM_BITMASK_SLUGS,
+    DHW_BINARY_SENSORS,
+    DOMAIN,
+    MANUAL_MODE_BIT,
+    MANUAL_MODE_SLUG,
+    dhw_binary_state,
+)
 from .coordinator import PlumDataUpdateCoordinator
 from .device import boiler_device_info
 from .issues import clear_issue, raise_issue
@@ -69,6 +79,12 @@ async def async_setup_entry(
         else:
             _LOGGER.debug("Alarm register '%s' not found in device map, skipping.", slug)
 
+    for key, (slug, *_rest) in DHW_BINARY_SENSORS.items():
+        if slug in coordinator.device.params_map:
+            entities.append(PlumDhwBinarySensor(coordinator, entry.entry_id, key))
+        else:
+            _LOGGER.debug("DHW register '%s' not found in device map, skipping '%s'.", slug, key)
+
     if entities:
         async_add_entities(entities)
 
@@ -97,6 +113,31 @@ class PlumManualModeBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], B
             return (int(val) & MANUAL_MODE_BIT) != 0
         except (TypeError, ValueError):
             return None
+
+
+class PlumDhwBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], BinarySensorEntity):
+    """One decoded DHW state (loading / outside charging window / recirculation pump)."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: PlumDataUpdateCoordinator, entry_id: str, key: str):
+        super().__init__(coordinator)
+        self._entry_id = entry_id
+        self._slug, self._mode, self._value, running = DHW_BINARY_SENSORS[key]
+        self._attr_translation_key = key
+        if running:
+            self._attr_device_class = BinarySensorDeviceClass.RUNNING
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_binary_sensor_{key}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return boiler_device_info(self._entry_id, self.coordinator.data.get("uid"))
+
+    @property
+    def is_on(self) -> bool | None:
+        return dhw_binary_state(self.coordinator.data.get(self._slug), self._mode, self._value)
 
 
 class PlumAlarmBinarySensor(CoordinatorEntity[PlumDataUpdateCoordinator], BinarySensorEntity):

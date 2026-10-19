@@ -354,6 +354,15 @@
             },
             "alarmbits_5": {
                 "name": "Bits Alarme 5"
+            },
+            "dhw_loading": {
+                "name": "Charge ECS en cours"
+            },
+            "dhw_outside_window": {
+                "name": "ECS hors plage de charge"
+            },
+            "dhw_circulation_pump": {
+                "name": "Pompe de bouclage ECS"
             }
         },
         "number": {

@@ -233,6 +233,30 @@ SERIAL_SLUG = "uid"
 MANUAL_MODE_SLUG = "heatsourcemainpumpstate"
 MANUAL_MODE_BIT = 64
 
+# DHW (domestic hot water) state decoded from two raw registers, observed over five
+# natural/forced loads and a manual-mode test on a real boiler (see the 1.4.0 candidates).
+# hdwstate is 128, 192, 16512 or 16576 at rest; bits 1, 4, 9 and 18 are set during a load
+# (262802, or 328338 with the forced-reload flag, bit 16) and never at rest. Bit 14 (16384)
+# is set while the DHW is in automatic mode outside its charging time window and clears when
+# the panel is put in manual mode (hdwusermode 1). circulationstate is 3 while the DHW
+# recirculation ("bouclage") pump runs (20 s every 10 min), 2 otherwise.
+# key -> (register slug, "mask" | "equals", value, is_running_class); icons are in icons.json
+DHW_BINARY_SENSORS: dict[str, tuple[str, str, int, bool]] = {
+    "dhw_loading": ("hdwstate", "mask", 262674, True),
+    "dhw_outside_window": ("hdwstate", "mask", 16384, False),
+    "dhw_circulation_pump": ("circulationstate", "equals", 3, True),
+}
+
+
+def dhw_binary_state(raw: object, mode: str, value: int) -> bool | None:
+    """Decodes one DHW binary sensor from its raw register value (None if unreadable)."""
+    try:
+        number = int(raw)  # type: ignore[call-overload]
+    except (TypeError, ValueError):
+        return None
+    return (number & value) != 0 if mode == "mask" else number == value
+
+
 # Alarm bitmask registers (DP_INVENTORY.md "Alarmes & bits de diagnostic").
 # Only the registers whose name unambiguously means "alarm" AND that read
 # zero on a healthy boiler are exposed as a coarse "some bit is set" problem

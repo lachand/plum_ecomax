@@ -354,6 +354,15 @@
             },
             "alarmbits_5": {
                 "name": "Bity alarmu 5"
+            },
+            "dhw_loading": {
+                "name": "Ładowanie CWU"
+            },
+            "dhw_outside_window": {
+                "name": "CWU poza oknem ładowania"
+            },
+            "dhw_circulation_pump": {
+                "name": "Pompa cyrkulacyjna CWU"
             }
         },
         "number": {

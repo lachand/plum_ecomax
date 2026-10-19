@@ -464,6 +464,17 @@
             "solar_dump_auto": {
                 "default": "mdi:sun-clock"
             }
+        },
+        "binary_sensor": {
+            "dhw_loading": {
+                "default": "mdi:water-boiler"
+            },
+            "dhw_outside_window": {
+                "default": "mdi:clock-alert-outline"
+            },
+            "dhw_circulation_pump": {
+                "default": "mdi:pump"
+            }
         }
     },
     "services": {

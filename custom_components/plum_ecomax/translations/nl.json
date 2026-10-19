@@ -354,6 +354,15 @@
             },
             "alarmbits_5": {
                 "name": "Alarmbits 5"
+            },
+            "dhw_loading": {
+                "name": "Warm tapwater wordt opgewarmd"
+            },
+            "dhw_outside_window": {
+                "name": "Warm tapwater buiten laadvenster"
+            },
+            "dhw_circulation_pump": {
+                "name": "Circulatiepomp warm tapwater"
             }
         },
         "number": {

@@ -150,6 +150,12 @@ Settings → Devices & Services → *Plum ecoMAX* → ⋮ → **Delete**. Remova
 
 Unit and regression tests live in `tests/` (`pytest tests/`); tests that run against a real Home Assistant (config flow manager, registries, setup/unload) live in `tests_ha/` (`pip install -r requirements_test_ha.txt`, then `pytest tests_ha -p pytest_homeassistant_custom_component`). `tests_ha/test_live_readonly.py` runs the whole integration against your real boiler, read-only (every write is forbidden), when `PLUM_LIVE_IP=<boiler ip>` is set; it is skipped otherwise. Home Assistant 2026.2 is what Python 3.13 resolves to: to reproduce CI locally on 3.13, `uv venv --python 3.13 .venv313 && uv pip install --python .venv313/bin/python -r requirements_test.txt` (the dev machine's own Python may be newer and hide 3.13-only errors). CI runs them on a Python 3.13/3.14 matrix (matching the Home Assistant releases users actually run) alongside `ruff check` / `ruff format --check`, `hassfest`, and HACS validation. Minimum supported Home Assistant: **2025.2**. See `DP_INVENTORY.md` for the catalog of boiler parameters not yet exposed as entities.
 
+### Upgrading to 1.5.0
+
+No reconfiguration needed. Restart Home Assistant after updating.
+
+* **Three decoded DHW states, as diagnostic binary sensors disabled by default** (enable them from the entity's settings): *DHW loading* (`hdwstate` bits 1, 4, 9 or 18), *DHW outside charging window* (`hdwstate` bit 14: the DHW is in automatic mode and outside its charging time window, so no automatic load can start; it clears when the panel is put in manual mode) and *DHW recirculation pump* (`circulationstate` = 3, 20 s every 10 min). They were decoded from five natural and forced DHW loads and a manual-mode test on one boiler; `hdwstate` is 128, 192, 16512 or 16576 at rest and 262802 (328338 with the forced-reload flag, bit 16) during a load. The raw *DHW state (raw)* sensor stays available.
+
 ### Upgrading to 1.4.0
 
 No reconfiguration needed. Restart Home Assistant after updating.

@@ -11,6 +11,7 @@ from .const import (
     ALARM_BITMASK_SLUGS,
     CLIMATE_TYPES,
     DEVICE_INFO_PARAMS,
+    DHW_BINARY_SENSORS,
     DIAGNOSTIC_SENSOR_SLUGS,
     MANUAL_MODE_SLUG,
     NUMBER_TYPES,
@@ -149,6 +150,7 @@ def detection_candidates(params_map: Mapping[str, Any]) -> list[str]:
     # never re-polls it after the initial scan.
     targets.append(MANUAL_MODE_SLUG)
     targets.extend(ALARM_BITMASK_SLUGS)
+    targets.extend(slug for slug, *_ in DHW_BINARY_SENSORS.values())
     # Not an entity, but device_info properties read this from
     # coordinator.data (see const.py's DEVICE_INFO_PARAMS docstring).
     targets.extend(DEVICE_INFO_PARAMS)

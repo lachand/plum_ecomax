@@ -7,6 +7,7 @@ import pytest
 from custom_components.plum_ecomax.const import (
     ALARM_BITMASK_SLUGS,
     DEVICE_INFO_PARAMS,
+    DHW_BINARY_SENSORS,
     MANUAL_MODE_SLUG,
     SENSOR_TYPES,
     SWITCH_TYPES,
@@ -101,6 +102,7 @@ class TestDetectionCandidates:
             *SWITCH_TYPES,
             *ALARM_BITMASK_SLUGS,
             *DEVICE_INFO_PARAMS,
+            *(slug for slug, *_ in DHW_BINARY_SENSORS.values()),
             MANUAL_MODE_SLUG,
         }
         result = detection_candidates({slug: {} for slug in everything})

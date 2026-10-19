@@ -354,6 +354,15 @@
             },
             "alarmbits_5": {
                 "name": "Alarm Bits 5"
+            },
+            "dhw_loading": {
+                "name": "DHW loading"
+            },
+            "dhw_outside_window": {
+                "name": "DHW outside charging window"
+            },
+            "dhw_circulation_pump": {
+                "name": "DHW recirculation pump"
             }
         },
         "number": {

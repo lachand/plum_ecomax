@@ -19,11 +19,13 @@ import pytest
 
 from custom_components.plum_ecomax.binary_sensor import (
     PlumAlarmBinarySensor,
+    PlumDhwBinarySensor,
     PlumManualModeBinarySensor,
     async_setup_entry,
 )
 from custom_components.plum_ecomax.const import (
     ALARM_BITMASK_SLUGS,
+    DHW_BINARY_SENSORS,
     DOMAIN,
     MANUAL_MODE_SLUG,
 )
@@ -201,3 +203,55 @@ class TestAlarmBinarySensor:
             await sensor.async_will_remove_from_hass()
 
         mock_clear.assert_called_once_with(sensor.hass, sensor._issue_id)
+
+
+class TestDhwBinarySensors:
+    """Decoding of hdwstate / circulationstate, from values observed on a real boiler."""
+
+    @staticmethod
+    def _state(key: str, raw) -> bool | None:
+        slug = DHW_BINARY_SENSORS[key][0]
+        entity = PlumDhwBinarySensor(_make_coordinator({slug: {"id": 1}}, {slug: raw}), "e1", key)
+        return entity.is_on
+
+    @pytest.mark.parametrize("raw", [128, 192, 16512, 16576, 0])
+    def test_not_loading_at_rest(self, raw):
+        assert self._state("dhw_loading", raw) is False
+
+    @pytest.mark.parametrize("raw", [262802, 328338])
+    def test_loading_during_a_natural_or_forced_load(self, raw):
+        assert self._state("dhw_loading", raw) is True
+
+    @pytest.mark.parametrize(
+        "raw,expected", [(16512, True), (16576, True), (128, False), (192, False), (262802, False)]
+    )
+    def test_outside_window_is_bit_14(self, raw, expected):
+        assert self._state("dhw_outside_window", raw) is expected
+
+    @pytest.mark.parametrize("raw,expected", [(3, True), (2, False), (0, False)])
+    def test_circulation_pump_is_state_3(self, raw, expected):
+        assert self._state("dhw_circulation_pump", raw) is expected
+
+    @pytest.mark.parametrize("raw", [None, "abc"])
+    def test_unreadable_register_is_unknown(self, raw):
+        assert self._state("dhw_loading", raw) is None
+
+    def test_disabled_by_default_diagnostics(self):
+        entity = PlumDhwBinarySensor(
+            _make_coordinator({"hdwstate": {"id": 1}}, {}), "e1", "dhw_loading"
+        )
+        assert entity.entity_registry_enabled_default is False
+        assert entity.unique_id == f"{DOMAIN}_e1_binary_sensor_dhw_loading"
+
+    @pytest.mark.asyncio
+    async def test_setup_creates_only_sensors_whose_register_exists(self):
+        coordinator = _make_coordinator({"hdwstate": {"id": 1}}, {})
+        entry = MagicMock()
+        entry.entry_id = "entry123"
+        entry.runtime_data = coordinator
+        added = []
+        await async_setup_entry(MagicMock(), entry, lambda entities: added.extend(entities))
+        assert {e._attr_translation_key for e in added if isinstance(e, PlumDhwBinarySensor)} == {
+            "dhw_loading",
+            "dhw_outside_window",
+        }

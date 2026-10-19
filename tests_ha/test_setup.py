@@ -295,6 +295,18 @@ async def test_dhw_loading_and_circuit_state_registers_are_created_disabled(hass
     assert prefix + "circuit5state" not in by_unique_id
 
 
+async def test_dhw_binary_sensors_are_created_disabled(hass):
+    entry = await _setup(hass)
+    registry = er.async_get(hass)
+    by_unique_id = {
+        e.unique_id: e for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+    for key in ("dhw_loading", "dhw_outside_window", "dhw_circulation_pump"):
+        entity = by_unique_id[f"{DOMAIN}_{entry.entry_id}_binary_sensor_{key}"]
+        assert entity.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+        assert entity.entity_category is EntityCategory.DIAGNOSTIC
+
+
 async def test_circuit_thermostat_reports_heating_from_the_mixing_valve(hass):
     FakePlumDevice.values["mixer2valveposition"] = 40.0
     await _setup(hass)
