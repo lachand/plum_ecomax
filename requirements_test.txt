@@ -7,5 +7,5 @@
 # Python-3.13 release, matching the lowest CI matrix entry.
 homeassistant>=2025.2.0
 pytest~=9.1
-pytest-asyncio~=1.4
+pytest-asyncio~=1.5
 mypy>=1.13
